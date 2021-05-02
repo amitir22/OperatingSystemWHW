@@ -4,12 +4,13 @@
 #include "CatCommand.h"
 
 using std::cout;
+using std::endl;
 
 void CatCommand::execute(vector<string> args) {
     vector<string> filenames = args;
 
     if (args.empty()) {
-        perror("smash error: cat: not enough arguments");
+        cout <<"smash error: cat: not enough arguments" << endl;
     } else {
         for (const auto &currentFilename : filenames) {
             printFile(currentFilename);
@@ -33,6 +34,7 @@ void CatCommand::printFile(const string &filename) const {
 
             if (bytesRead == -1) {
                 perror("smash error: read failed");
+                return;
             } else {
                 buffer[bytesRead] = '\0';
                 cout << buffer;

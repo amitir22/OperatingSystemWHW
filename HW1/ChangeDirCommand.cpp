@@ -21,7 +21,12 @@ void ChangeDirCommand::execute(vector<string> args) {
     string newDirectory;
     string previousDirectory = shell.getCurrentDirectory();
 
-
+    // todo: make sure if needs to be included or deleted
+    //if (args.empty()) {
+    //    cout << "smash error: kill: invalid arguments" << endl;
+    //
+    //    return;
+    //} else
     if (args.size() > MAX_NUM_OF_ARGS) {
         cout << "smash error: cd: too many arguments" << endl;
 

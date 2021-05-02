@@ -33,17 +33,23 @@ void KillCommand::execute(vector<string> args) {
 }
 
 bool KillCommand::areParamsValid(const vector<string> &args) {
+    // TODO: make sure if this 'fix' is needed
     bool areThereTwoArgs = args.size() == 2;
-    bool isSecondArgOnlyDigits = areThereTwoArgs && args[1].find_first_not_of(ALL_DIGITS) == string::npos;
-    bool isFirstArgPrefixCorrect = args[0][0] == '-';
-    const string &signalNumString = args[0].substr(1, args[0].size() - 1);
-    int signalNumber = extractSignalNumberFromArgs(args);
 
-    bool isFirstArgSuffixValidDigits =
-            signalNumString.find_first_not_of(ALL_DIGITS) == string::npos &&
-            signalNumber >= 1 && signalNumber <= 32;
+    if (areThereTwoArgs) {
+        bool isSecondArgOnlyDigits = args[1].find_first_not_of(ALL_DIGITS) == string::npos;
+        bool isFirstArgPrefixCorrect = args[0][0] == '-';
+        const string &signalNumString = args[0].substr(1, args[0].size() - 1);
+        int signalNumber = extractSignalNumberFromArgs(args);
 
-    return areThereTwoArgs && isFirstArgPrefixCorrect && isFirstArgSuffixValidDigits && isSecondArgOnlyDigits;
+        bool isFirstArgSuffixValidDigits =
+                signalNumString.find_first_not_of(ALL_DIGITS) == string::npos &&
+                signalNumber >= 1 && signalNumber <= 32;
+
+        return isFirstArgPrefixCorrect && isFirstArgSuffixValidDigits && isSecondArgOnlyDigits;
+    }
+
+    return false;
 }
 
 
