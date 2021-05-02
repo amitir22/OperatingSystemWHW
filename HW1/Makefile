@@ -2,7 +2,7 @@
 SUBMITTERS := <student1-ID>_<student2-ID>
 COMPILER := g++
 COMPILER_FLAGS := --std=c++11 -Wall
-SRCS := Commands.cpp signals.cpp smash.cpp
+SRCS := Commands.cpp smash.cpp
 OBJS=$(subst .cpp,.o,$(SRCS))
 HDRS := Commands.h signals.h
 TESTS_INPUTS := $(wildcard test_input*.txt)
