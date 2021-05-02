@@ -25,24 +25,21 @@ void PipeCommand::execute(vector<string> args) {
 
     if (firstCommandPid == -1) {
         perror("smash error: fork failed");
+    } else if (firstCommandPid == 0) {
+        runFirstPipeCommand(args, readWritePipes);
     } else {
-        if (firstCommandPid == 0) {
-            runFirstPipeCommand(args, readWritePipes);
+        secondCommandPid = fork();
+
+        if (secondCommandPid == -1) {
+            perror("smash error: fork failed");
         } else {
-            secondCommandPid = fork();
-
-            if (secondCommandPid == -1) {
-                perror("smash error: fork failed");
-            } else {
-                if (secondCommandPid == 0) {
-                    runSecondPipeCommand(args, readWritePipes);
-                }
-
-                closePipeFDs(readWritePipes);
-
-                waitForCommandToFinish(args, firstCommandPid, secondCommandPid);
+            if (secondCommandPid == 0) {
+                runSecondPipeCommand(args, readWritePipes);
             }
 
+            closePipeFDs(readWritePipes);
+
+            waitForCommandToFinish(args, firstCommandPid, secondCommandPid);
         }
     }
 }

@@ -15,6 +15,7 @@
 #include "ForegroundCommand.h"
 #include "BackgroundCommand.h"
 #include "QuitCommand.h"
+#include "CatCommand.h"
 
 
 const string WHITESPACE = " \n\r\t\f\v";
@@ -29,6 +30,7 @@ const string KILL_COMMAND_KEYWORD = "kill";
 const string FG_COMMAND_KEYWORD = "fg";
 const string BG_COMMAND_KEYWORD = "bg";
 const string QUIT_COMMAND_KEYWORD = "quit";
+const string CAT_COMMAND_KEYWORD = "cat";
 
 
 CommandExecutor::CommandExecutor(JobsList &jobsList) : jobsList(jobsList), externalCommand(jobsList) {
@@ -135,4 +137,9 @@ void CommandExecutor::initCommandVariables() {
             unique_ptr<QuitCommand>(new QuitCommand(this->jobsList));
     builtinCommandsArgToCommand.insert(pair<string, unique_ptr<Command>>(QUIT_COMMAND_KEYWORD,
                                                                          move(quitCommand)));
+
+    unique_ptr<CatCommand> catCommand =
+            unique_ptr<CatCommand>(new CatCommand());
+    builtinCommandsArgToCommand.insert(pair<string, unique_ptr<Command>>(CAT_COMMAND_KEYWORD,
+                                                                         move(catCommand)));
 }
