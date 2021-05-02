@@ -16,7 +16,6 @@ add_executable(OSWet1
         ShowPidCommand.cpp ShowPidCommand.h
         QuitCommand.cpp QuitCommand.h
         CommandsHistory.cpp CommandsHistory.h
-        HistoryCommand.cpp HistoryCommand.h
         JobsList.cpp JobsList.h
         JobsCommand.cpp JobsCommand.h
         KillCommand.cpp KillCommand.h

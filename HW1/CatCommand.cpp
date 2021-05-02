@@ -7,8 +7,12 @@ using std::cout;
 void CatCommand::execute(vector<string> args) {
     vector<string> filenames = args;
 
-    for (const auto &currentFilename : filenames) {
-        printFile(currentFilename);
+    if (args.empty()) {
+        perror("smash error: cat: not enough arguments");
+    } else {
+        for (const auto &currentFilename : filenames) {
+            printFile(currentFilename);
+        }
     }
 }
 
