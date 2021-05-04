@@ -2,13 +2,13 @@ SUBMITTERS := 315836569_203839733
 COMPILER := g++
 COMPILER_FLAGS := --std=c++11 -Wall
 SRCS := Commands.cpp smash.cpp BackgroundCommand.cpp BuiltInCommand.cpp CatCommand.cpp ChangeDirCommand.cpp \
-ChpromptCommand.cpp CommandExecutor.cpp CommandsHistory.cpp ExternalCommand.cpp ForegroundCommand.cpp \
+ChpromptCommand.cpp CommandExecutor.cpp ExternalCommand.cpp ForegroundCommand.cpp \
 GetCurrentDirectoryCommand.cpp JobsCommand.cpp JobsList.cpp KillCommand.cpp PipeCommand.cpp \
 QuitCommand.cpp RedirectionCommand.cpp ShowPidCommand.cpp SmallShell.cpp
 
 OBJS=$(subst .cpp,.o,$(SRCS))
 HDRS := Commands.h BackgroundCommand.h BuiltInCommand.h CatCommand.h ChangeDirCommand.h ChpromptCommand.h \
-CommandExecutor.h CommandsHistory.h ExternalCommand.h ForegroundCommand.h GetCurrentDirectoryCommand.h JobsCommand.h \
+CommandExecutor.h ExternalCommand.h ForegroundCommand.h GetCurrentDirectoryCommand.h JobsCommand.h \
 JobsList.h KillCommand.h PipeCommand.h QuitCommand.h RedirectionCommand.h ShowPidCommand.h SmallShell.h
 
 TESTS_INPUTS := $(wildcard test_input*.txt)
