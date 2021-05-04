@@ -1,7 +1,6 @@
 #ifndef SMASH_COMMAND_H_
 #define SMASH_COMMAND_H_
 
-#include "CommandsHistory.h"
 #include <vector>
 #include <string>
 

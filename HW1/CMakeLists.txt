@@ -15,7 +15,6 @@ add_executable(OSWet1
         GetCurrentDirectoryCommand.cpp GetCurrentDirectoryCommand.h
         ShowPidCommand.cpp ShowPidCommand.h
         QuitCommand.cpp QuitCommand.h
-        CommandsHistory.cpp CommandsHistory.h
         JobsList.cpp JobsList.h
         JobsCommand.cpp JobsCommand.h
         KillCommand.cpp KillCommand.h
