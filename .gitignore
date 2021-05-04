@@ -71,3 +71,4 @@ fabric.properties
 /HW1/smash
 /HW1/files/my_sleep
 /HW1/unit/*.out
+.idea/**/.name
