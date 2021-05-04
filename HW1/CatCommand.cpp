@@ -22,7 +22,6 @@ void CatCommand::printFile(const string &filename) const {
     int fd = open(filename.c_str(), O_RDONLY, 0666);
 
     if (fd == -1) {
-        // todo: make sure this is what supposed to be printed
         perror("smash error: open failed");
     } else {
         ssize_t bytesRead;
@@ -42,6 +41,8 @@ void CatCommand::printFile(const string &filename) const {
                 shouldKeepReading = bytesRead > 0;
             }
         }
+
+        cout << flush;
 
         bool didNotClose = close(fd) == -1;
 

@@ -10,7 +10,6 @@
 
 
 class BackgroundCommand : public BuiltInCommand {
-    // TODO: Add your data members
 public:
     explicit BackgroundCommand(JobsList &jobsList);
 

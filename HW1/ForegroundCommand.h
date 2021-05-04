@@ -11,7 +11,6 @@
 
 
 class ForegroundCommand : public BuiltInCommand {
-    // TODO: Add your data members
 public:
     explicit ForegroundCommand(JobsList &jobsList);
 

@@ -33,7 +33,6 @@ void KillCommand::execute(vector<string> args) {
 }
 
 bool KillCommand::areParamsValid(const vector<string> &args) {
-    // TODO: make sure if this 'fix' is needed
     bool areThereTwoArgs = args.size() == 2;
 
     if (areThereTwoArgs) {

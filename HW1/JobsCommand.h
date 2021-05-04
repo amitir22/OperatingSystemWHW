@@ -10,7 +10,6 @@
 
 
 class JobsCommand : public BuiltInCommand {
-    // TODO: Add your data members
 public:
     explicit JobsCommand(JobsList &jobsList);
 

@@ -53,6 +53,7 @@ void RedirectionCommand::runRedirectedCommand(vector<string> args, bool append) 
         dup2(fd, STDOUT_FILENO);
 
         commandExecutor.executeCommand(command);
+
         // restore Fd
         dup2(saveStdOutFd, STDOUT_FILENO);
 

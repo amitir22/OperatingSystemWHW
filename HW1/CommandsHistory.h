@@ -12,7 +12,6 @@ class CommandsHistory {
 
 protected:
     class CommandHistoryEntry {
-        // TODO: Add your data members
     };
 
 public:

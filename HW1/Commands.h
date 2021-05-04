@@ -12,7 +12,6 @@ using namespace std;
 #define HISTORY_MAX_RECORDS (50)
 
 class Command {
-// TODO: Add your data members
 public:
     explicit Command();
 
@@ -21,7 +20,6 @@ public:
     virtual void execute(vector<string> args) = 0;
     //virtual void prepare();
     //virtual void cleanup();
-    // TODO: Add your extra methods if needed
 };
 
 #endif //SMASH_COMMAND_H_

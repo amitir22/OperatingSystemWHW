@@ -10,7 +10,6 @@
 
 
 class KillCommand : public BuiltInCommand {
-    // TODO: Add your data members
 public:
     explicit KillCommand(JobsList &jobsList);
 

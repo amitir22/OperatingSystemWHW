@@ -11,7 +11,6 @@
 
 
 class RedirectionCommand {
-    // TODO: Add your data members
 public:
     explicit RedirectionCommand(JobsList &jobsList);
 
