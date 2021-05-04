@@ -1,5 +1,0 @@
-cp test_src_1.txt test_newdest_1.txt
-diff test_src_1.txt test_newdest_1.txt
-rm -f test_newdest_1.txt
-quit
-
