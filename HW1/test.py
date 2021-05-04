@@ -162,9 +162,9 @@ def diff(expected, actual):
     d = unified_diff([x.rstrip() for x in e.readlines()], [x.rstrip() for x in a.readlines()])
     diff_str = ''.join(d)
     if diff_str == '':
-        print('Files are equal')
+        print('Files are equal - SUCCESS')
     else:
-        print('Files are different')
+        print('Files are different - FAILED')
         print(diff_str)
     a.close()
     e.close()
