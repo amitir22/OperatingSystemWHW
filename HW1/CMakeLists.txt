@@ -22,6 +22,5 @@ add_executable(OSWet1
         ForegroundCommand.cpp ForegroundCommand.h
         BackgroundCommand.cpp BackgroundCommand.h
         ChpromptCommand.cpp ChpromptCommand.h
-        LsCommand.cpp LsCommand.h
         CommandExecutor.cpp CommandExecutor.h
         CatCommand.cpp CatCommand.h)

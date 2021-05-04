@@ -6,7 +6,6 @@
 #include "CommandExecutor.h"
 #include "Commands.h"
 #include "ChpromptCommand.h"
-#include "LsCommand.h"
 #include "ShowPidCommand.h"
 #include "GetCurrentDirectoryCommand.h"
 #include "JobsCommand.h"
@@ -21,7 +20,6 @@
 const string WHITESPACE = " \n\r\t\f\v";
 
 const string CHROMPT_COMMAND_KEYWORD = "chprompt";
-const string LS_COMMAND_KEYWORD = "ls";
 const string SHOW_PID_COMMAND_KEYWORD = "showpid";
 const string GET_CURRENT_DIRECTORY_COMMAND_KEYWORD = "pwd";
 const string CD_COMMAND_KEYWORD = "cd";
@@ -92,11 +90,6 @@ void CommandExecutor::initCommandVariables() {
             unique_ptr<ChpromptCommand>(new ChpromptCommand());
     builtinCommandsArgToCommand.insert(pair<string, unique_ptr<Command>>(CHROMPT_COMMAND_KEYWORD,
                                                                          move(chromptCommand)));
-
-    unique_ptr<Command> lsCommand =
-            unique_ptr<LsCommand>(new LsCommand());
-    builtinCommandsArgToCommand.insert(pair<string, unique_ptr<Command>>(LS_COMMAND_KEYWORD,
-                                                                         move(lsCommand)));
 
     unique_ptr<Command> showPidCommand =
             unique_ptr<ShowPidCommand>(new ShowPidCommand());
