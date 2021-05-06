@@ -14,7 +14,7 @@ void CatCommand::execute(vector<string> args) {
     vector<string> filenames = args;
 
     if (args.empty()) {
-        cout <<"smash error: cat: not enough arguments" << endl;
+        cerr <<"smash error: cat: not enough arguments" << endl;
     } else {
         for (const auto &currentFilename : filenames) {
             printFile(currentFilename);

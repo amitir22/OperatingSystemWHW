@@ -16,7 +16,7 @@ KillCommand::~KillCommand() = default;
 
 void KillCommand::execute(vector<string> args) {
     if (!areParamsValid(args)) {
-        cout << "smash error: kill: invalid arguments" << endl;
+        cerr << "smash error: kill: invalid arguments" << endl;
     } else {
         int jobId = atoi(args[1].c_str());
         int signalNumber = extractSignalNumberFromArgs(args);
@@ -24,7 +24,7 @@ void KillCommand::execute(vector<string> args) {
         const shared_ptr<JobsList::JobEntry> job = this->jobsList.getJobById(jobId);
 
         if (job == nullptr) {
-            cout << "smash error: kill: job-id " + to_string(jobId) + " does not exist" << endl;
+            cerr << "smash error: kill: job-id " + to_string(jobId) + " does not exist" << endl;
         } else {
             cout << "signal number " + to_string(signalNumber) + " was sent to pid " + to_string(job->pid) << endl;
             kill(job->pid, signalNumber);

@@ -18,7 +18,7 @@ ForegroundCommand::~ForegroundCommand() = default;
 
 void ForegroundCommand::execute(vector<string> args) {
     if (!areParamsValid(args)) {
-        cout << "smash error: fg: invalid arguments" << endl;
+        cerr << "smash error: fg: invalid arguments" << endl;
     } else {
         shared_ptr<JobsList::JobEntry> job = getJob(args);
         SmallShell &shell = SmallShell::getInstance();
@@ -63,7 +63,7 @@ shared_ptr<JobsList::JobEntry> ForegroundCommand::getJob(const vector<string> &a
         job = jobsList.getLastJob();
 
         if (job == nullptr) {
-            cout << "smash error: fg: jobs list is empty" << endl;
+            cerr << "smash error: fg: jobs list is empty" << endl;
         }
     } else {
         int jobId = strtol(args[0].c_str(), nullptr, 10);
@@ -71,7 +71,7 @@ shared_ptr<JobsList::JobEntry> ForegroundCommand::getJob(const vector<string> &a
         job = jobsList.getJobById(jobId);
 
         if (job == nullptr) {
-            cout << "smash error: fg: job-id " + to_string(jobId) + " does not exist" << endl;
+            cerr << "smash error: fg: job-id " + to_string(jobId) + " does not exist" << endl;
         }
     }
 

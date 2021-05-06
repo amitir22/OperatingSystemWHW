@@ -14,13 +14,13 @@ BackgroundCommand::~BackgroundCommand() = default;
 
 void BackgroundCommand::execute(vector<string> args) {
     if (!areParamsValid(args)) {
-        cout << "smash error: bg: invalid arguments" << endl;
+        cerr << "smash error: bg: invalid arguments" << endl;
     } else {
         shared_ptr<JobsList::JobEntry> job = getJob(args);
 
         if (job != nullptr) {
             if (!(job->isStopped)) {
-                cout << "smash error: bg: job-id " << job->jobId << " is already running in the background" << endl;
+                cerr << "smash error: bg: job-id " << job->jobId << " is already running in the background" << endl;
             } else {
                cout << job->command << " : " << job->pid << endl;
 
@@ -56,7 +56,7 @@ shared_ptr<JobsList::JobEntry> BackgroundCommand::getJob(const vector<string> &a
         job = jobsList.getLastStoppedJob();
 
         if (job == nullptr) {
-          cout <<"smash error: bg: there is no stopped jobs to resume" << endl;
+          cerr <<"smash error: bg: there is no stopped jobs to resume" << endl;
         }
     } else {
         int jobId = strtol(args[0].c_str(), nullptr, 10);
@@ -64,7 +64,7 @@ shared_ptr<JobsList::JobEntry> BackgroundCommand::getJob(const vector<string> &a
         job = jobsList.getJobById(jobId);
 
         if (job == nullptr) {
-           cout << "smash error: bg: job-id " << jobId << " does not exist" << endl;
+           cerr << "smash error: bg: job-id " << jobId << " does not exist" << endl;
         }
     }
 

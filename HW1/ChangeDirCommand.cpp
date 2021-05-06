@@ -24,12 +24,12 @@ void ChangeDirCommand::execute(vector<string> args) {
     if (args.empty()) {
         return;
     } else if (args.size() > MAX_NUM_OF_ARGS) {
-        cout << "smash error: cd: too many arguments" << endl;
+        cerr << "smash error: cd: too many arguments" << endl;
 
         return;
     } else if (args[0] == SPECIAL_ARG_TO_CHANGE_TO_PREV_DIRECTORY) {
         if (shell.getPreviousDirectory().empty()) {
-            cout << "smash error: cd: OLDPWD not set" << endl;
+            cerr << "smash error: cd: OLDPWD not set" << endl;
 
             return;
         } else {
