@@ -945,8 +945,10 @@ asmlinkage long sys_hello(void);
 
 asmlinkage long sys_set_weight(int weight);
 
-asmlinkage long sys_get_total_weight(void);
+asmlinkage long sys_get_weight(void);
 
-asmlinkage long sys_get_heaviest_child(void);
+asmlinkage long sys_get_children_sum(void);
+
+asmlinkage long sys_get_heaviest_ancestor(void);
 
 #endif
