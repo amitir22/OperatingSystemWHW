@@ -1,17 +1,15 @@
 #!/bin/bash
 
-CLION_PATH='~/CLionProjects/OperatingSystemWHW/HW2'
-
 echo '>> installing dos2unix'
 sudo apt install -y dos2unix
 echo '>> dos2unix installed.'
 
-dos2unix '~/$(CLION_PATH)/arch/x86/entry/syscalls/syscall_64.tbl'
-dos2unix '~/$(CLION_PATH)/include/linux/init_task.h'
-dos2unix '~/$(CLION_PATH)/include/linux/sched.h'
-dos2unix '~/$(CLION_PATH)/include/linux/syscalls.h'
-dos2unix '~/$(CLION_PATH)/kernel/Makefile'
-dos2unix '~/$(CLION_PATH)/kernel/hw2.c'
+dos2unix ~/CLionProjects/OperatingSystemWHW/HW2/arch/x86/entry/syscalls/syscall_64.tbl
+dos2unix ~/CLionProjects/OperatingSystemWHW/HW2/include/linux/init_task.h
+dos2unix ~/CLionProjects/OperatingSystemWHW/HW2/include/linux/sched.h
+dos2unix ~/CLionProjects/OperatingSystemWHW/HW2/include/linux/syscalls.h
+dos2unix ~/CLionProjects/OperatingSystemWHW/HW2/kernel/Makefile
+dos2unix ~/CLionProjects/OperatingSystemWHW/HW2/kernel/hw2.c
 
 echo '>> finished unixing all source files'
 
@@ -21,12 +19,12 @@ pwd
 echo ''
 echo '>> copying source files from clion folder to custom kernel folder:'
 
-cp '$(CLION_PATH)/arch/x86/entry/syscalls/syscall_64.tbl' arch/x86/entry/syscalls/syscall_64.tbl
-cp '$(CLION_PATH)/include/linux/init_task.h' include/linux/init_task.h
-cp '$(CLION_PATH)/include/linux/sched.h' include/linux/sched.h
-cp '$(CLION_PATH)/include/linux/syscalls.h' include/linux/syscalls.h
-cp '$(CLION_PATH)/kernel/Makefile' kernel/Makefile
-cp '$(CLION_PATH)/kernel/hw2.c' kernel/hw2.c
+cp ~/CLionProjects/OperatingSystemWHW/HW2/arch/x86/entry/syscalls/syscall_64.tbl ~/linux-4.15.18-custom/arch/x86/entry/syscalls/syscall_64.tbl
+cp ~/CLionProjects/OperatingSystemWHW/HW2/include/linux/init_task.h ~/linux-4.15.18-custom/include/linux/init_task.h
+cp ~/CLionProjects/OperatingSystemWHW/HW2/include/linux/sched.h ~/linux-4.15.18-custom/include/linux/sched.h
+cp ~/CLionProjects/OperatingSystemWHW/HW2/include/linux/syscalls.h ~/linux-4.15.18-custom/include/linux/syscalls.h
+cp ~/CLionProjects/OperatingSystemWHW/HW2/kernel/Makefile ~/linux-4.15.18-custom/kernel/Makefile
+cp ~/CLionProjects/OperatingSystemWHW/HW2/kernel/hw2.c ~/linux-4.15.18-custom/kernel/hw2.c
 
 echo '>> done.'
 echo ''
