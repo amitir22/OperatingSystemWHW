@@ -565,6 +565,7 @@ struct task_struct {
 	 */
 	struct thread_info		thread_info;
 #endif
+	volatile int 			weight;
 	/* -1 unrunnable, 0 runnable, >0 stopped: */
 	volatile long			state;
 
@@ -579,7 +580,6 @@ struct task_struct {
 	/* Per task flags (PF_*), defined further below: */
 	unsigned int			flags;
 	unsigned int			ptrace;
-	int weight;
 
 #ifdef CONFIG_SMP
 	struct llist_node		wake_entry;
