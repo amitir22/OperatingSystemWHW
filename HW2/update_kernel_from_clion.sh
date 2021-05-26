@@ -20,12 +20,12 @@ cd ~/linux-4.15.18-custom/
 echo ''
 echo '>> copying source files from clion folder to custom kernel folder:'
 
-cp '~/$(CLION_PATH)/HW2/arch/x86/entry/syscalls/syscall_64.tbl' arch/x86/entry/syscalls/syscall_64.tbl
-cp '~/$(CLION_PATH)/HW2/include/linux/init_task.h' include/linux/init_task.h
-cp '~/$(CLION_PATH)/HW2/include/linux/sched.h' include/linux/sched.h
-cp '~/$(CLION_PATH)/HW2/include/linux/syscalls.h' include/linux/syscalls.h
-cp '~/$(CLION_PATH)/HW2/kernel/Makefile' kernel/Makefile
-cp '~/$(CLION_PATH)/HW2/kernel/hw2.c' kernel/hw2.c
+cp '$(CLION_PATH)/HW2/arch/x86/entry/syscalls/syscall_64.tbl' arch/x86/entry/syscalls/syscall_64.tbl
+cp '$(CLION_PATH)/HW2/include/linux/init_task.h' include/linux/init_task.h
+cp '$(CLION_PATH)/HW2/include/linux/sched.h' include/linux/sched.h
+cp '$(CLION_PATH)/HW2/include/linux/syscalls.h' include/linux/syscalls.h
+cp '$(CLION_PATH)/HW2/kernel/Makefile' kernel/Makefile
+cp '$(CLION_PATH)/HW2/kernel/hw2.c' kernel/hw2.c
 
 echo '>> done.'
 echo ''
