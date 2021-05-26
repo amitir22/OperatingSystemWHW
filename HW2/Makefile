@@ -20,6 +20,9 @@ $(GRADE): $(RESULTS)
 $(RESULTS): %.out: %.exe
 	taskset -c 0 ./$< > $@ 2>&1
 
+zip:
+	zip -r final.zip arch/x86/entry/syscalls/syscall_64.tbl include/linux/init_task.h include/linux/sched.h \
+			include/linux/syscalls.h kernel/Makefile kernel/hw2.c submitters.txt
+
 clean:
 	rm -f $(TARGETS) $(RESULTS) $(GRADE)
-
