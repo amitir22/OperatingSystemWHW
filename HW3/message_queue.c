@@ -8,11 +8,12 @@ typedef struct t_node {
 struct t_message_queue {
     unsigned int capacity;
     unsigned int size;
-
-    int sync_object; // todo:
-
     Node head;
     Node tail;
+
+    pthread_cond_t cond_get;
+    pthread_cond_t cond_put;
+    pthread_mutex_t lock;
 };
 
 // TODO: MAKE SYNCHRONIZED
@@ -27,7 +28,7 @@ struct t_message_queue {
 MessageQueue MQCreate(unsigned int capacity) {
     MessageQueue mq = (MessageQueue) malloc(sizeof(*mq));
 
-    if (!mq) {
+    if (!mq && capacity != 0) {
         return NULL;
     }
 
@@ -35,7 +36,10 @@ MessageQueue MQCreate(unsigned int capacity) {
     mq->capacity = capacity;
     mq->head = NULL;
     mq->tail = NULL;
-    // todo: init sync_object?
+
+    pthread_mutex_init(&mq->lock, NULL);
+    pthread_cond_init(&mq->cond_get, NULL);
+    pthread_cond_init(&mq->cond_put, NULL);
 }
 
 /**
@@ -74,7 +78,6 @@ void MQFree(MessageQueue messageQueue) {
  *
  * @returns (MQRetCode):
  *      MQ_ERR_NULL_ARGS - if messageQueue or message is Null
- *      MQ_ERR_FULL_QUEUE - if the queue is full.
  *      MQ_ERR_MEMORY_FAIL - if a memory allocation failed.
  *      MQ_ERR_GENERAL_FAILURE - if operation failed for undocumented reason.
  *      MQ_SUCCESS - upon completion.
@@ -82,10 +85,6 @@ void MQFree(MessageQueue messageQueue) {
 MQRetCode MQPut(MessageQueue messageQueue, Message message) {
     if (!messageQueue || !message) {
         return MQ_ERR_NULL_ARGS;
-    }
-
-    if (messageQueue->size == messageQueue->capacity) {
-        return MQ_ERR_FULL_QUEUE;
     }
 
     Message messageCopy = MessageCopy(message);
@@ -106,6 +105,12 @@ MQRetCode MQPut(MessageQueue messageQueue, Message message) {
     newNode->next = NULL;
     newNode->message = messageCopy;
 
+    mutex_lock(&messageQueue->lock);
+
+    while (messageQueue->size == messageQueue->capacity) {
+        cond_wait(&messageQueue->cond_get, &messageQueue->lock);
+    }
+
     messageQueue->tail->next = newNode;
     ++messageQueue->size;
     messageQueue->tail = newNode;
@@ -113,6 +118,9 @@ MQRetCode MQPut(MessageQueue messageQueue, Message message) {
     if (messageQueue->size == 1) {
         messageQueue->head = messageQueue->tail;
     }
+
+    cond_signal(&messageQueue->cond_put);
+    mutex_unlock(&messageQueue->lock);
 
     return MQ_SUCCESS;
 }
@@ -126,7 +134,6 @@ MQRetCode MQPut(MessageQueue messageQueue, Message message) {
  *
  * @returns (MQRetCode):
  *      MQ_ERR_NULL_ARGS - if messageQueue or message is Null
- *      MQ_ERR_EMPTY_QUEUE - if the queue is empty.
  *      MQ_ERR_GENERAL_FAILURE - if operation failed for undocumented reason.
  *      MQ_SUCCESS - upon completion.
  * */
@@ -135,18 +142,22 @@ MQRetCode MQGet(MessageQueue messageQueue, Message *message) {
         return MQ_ERR_NULL_ARGS;
     }
 
-    if (messageQueue->size == 0) {
-        return MQ_ERR_EMPTY_QUEUE;
+    mutex_lock(&messageQueue->lock);
+
+    while (messageQueue->size == 0) {
+        cond_wait(&messageQueue->cond_put, &messageQueue->lock);
     }
 
     *message = messageQueue->head->message;
-
     --messageQueue->size;
     messageQueue->head = messageQueue->head->next;
 
     if (messageQueue->size == 0) {
         messageQueue->tail = messageQueue->head;
     }
+
+    cond_signal(&messageQueue->cond_get);
+    mutex_unlock(&messageQueue->lock);
 
     return MQ_SUCCESS;
 }

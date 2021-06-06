@@ -5,14 +5,12 @@
 
 typedef struct t_message_queue *MessageQueue;
 
-typedef enum e_mq_return_code MQRetCode {
+typedef enum e_mq_return_code {
     MQ_SUCCESS,
     MQ_ERR_GENERAL_FAILURE,
     MQ_ERR_NULL_ARGS,
-    MQ_ERR_FULL_QUEUE,
-    MQ_ERR_EMPTY_QUEUE,
     MQ_ERR_MEMORY_FAIL
-};
+} MQRetCode;
 
 MessageQueue MQCreate(unsigned int capacity);
 void MQFree(MessageQueue messageQueue);

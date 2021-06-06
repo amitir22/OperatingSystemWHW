@@ -54,12 +54,18 @@ int main(int argc, char *argv[])
 	    clientlen = sizeof(clientaddr);
 	    connfd = Accept(listenfd, (SA *)&clientaddr, (socklen_t *) &clientlen);
 
+	    // connectionQueue.put(connfd);
+
 	    //
 	    // HW3: In general, don't handle the request in the main thread.
 	    // Save the relevant info in a buffer and have one of the worker threads
 	    // do the work.
 	    //
+
+	    // while(1) {
+	    // connectionQueue.get(connfd);
 	    requestHandle(connfd);
+	    // }
 
 	    Close(connfd);
     }
