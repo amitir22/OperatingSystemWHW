@@ -74,3 +74,7 @@ fabric.properties
 /HW1/tests/*.out
 .idea/**/.name
 /HW1/315836569_203839733.zip
+
+/HW3/client
+/HW3/server
+/HW3/output.cgi
