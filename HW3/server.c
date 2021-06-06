@@ -12,42 +12,45 @@
 //
 
 // HW3: Parse the new arguments too
-void getargs(int *port, int argc, char *argv[])
+void getargs(int *port, int *threadPoolSize,  int argc, char *argv[])
 {
     if (argc < 2) {
-	fprintf(stderr, "Usage: %s <port>\n", argv[0]);
-	exit(1);
+	    fprintf(stderr, "Usage: %s <port>\n", argv[0]);
+	    exit(1);
     }
+
     *port = atoi(argv[1]);
+    *threadPoolSize = atoi(argv[2]);
 }
 
 
 int main(int argc, char *argv[])
 {
-    int listenfd, connfd, port, clientlen;
+    int listenfd, connfd, port, clientlen, threadPoolSize;
     struct sockaddr_in clientaddr;
 
-    getargs(&port, argc, argv);
+    getargs(&port, &threadPoolSize, argc, argv);
 
     // 
     // HW3: Create some threads...
     //
+    fprintf(stdout, "thread pool size: %d\n", threadPoolSize);
 
     listenfd = Open_listenfd(port);
+
     while (1) {
-	clientlen = sizeof(clientaddr);
-	connfd = Accept(listenfd, (SA *)&clientaddr, (socklen_t *) &clientlen);
+	    clientlen = sizeof(clientaddr);
+	    connfd = Accept(listenfd, (SA *)&clientaddr, (socklen_t *) &clientlen);
 
-	// 
-	// HW3: In general, don't handle the request in the main thread.
-	// Save the relevant info in a buffer and have one of the worker threads 
-	// do the work. 
-	// 
-	requestHandle(connfd);
+	    //
+	    // HW3: In general, don't handle the request in the main thread.
+	    // Save the relevant info in a buffer and have one of the worker threads
+	    // do the work.
+	    //
+	    requestHandle(connfd);
 
-	Close(connfd);
+	    Close(connfd);
     }
-
 }
 
 
