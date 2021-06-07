@@ -42,6 +42,7 @@ void threadHandleRequest(MessageQueue connectionsQueue) {
         if (getRetCode == MQ_SUCCESS) {
             currentConnFd = currentConnectionMessage->content.fd;
             requestHandle(currentConnFd);
+            Close(currentConnFd);
         }
     }
 }
@@ -87,8 +88,7 @@ int main(int argc, char *argv[])
         if (putRetCode == MQ_SUCCESS) {
             continue;
         }
-
-        // todo: handle putRetCode
+        // todo: handle putRetCode?
 
 	    //
 	    // HW3: In general, don't handle the request in the main thread.
@@ -99,9 +99,8 @@ int main(int argc, char *argv[])
 	    // while(1) {
 	    // connectionQueue.get(connfd);
 	    requestHandle(connfd);
-	    // }
-
 	    Close(connfd);
+        // }
     }
 }
 
