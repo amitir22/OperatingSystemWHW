@@ -80,3 +80,4 @@ fabric.properties
 /HW3/client
 /HW3/server
 /HW3/output.cgi
+/HW3/public/*
