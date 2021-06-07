@@ -1,9 +1,5 @@
 #include "message.h"
 
-struct t_message {
-    char *content;
-};
-
 /**
  * MessageCreate: constructs a Message object.
  *
@@ -11,7 +7,7 @@ struct t_message {
  *
  * @returns: a Message object (or NULL if fails).
  * */
-Message MessageCreate(char *content) {
+Message MessageCreate(Content content, MessageContentType contentType) {
     Message message = (Message) malloc(sizeof(*message));
 
     if (!message) {
@@ -19,17 +15,41 @@ Message MessageCreate(char *content) {
         return NULL;
     }
 
-    message->content = (char *) malloc(strlen(content) + 1);
+    message->contentType = contentType;
 
-    if (!message->content) {
-        // allocation failed, rollback
+    if (contentType == MSG_INT) {
+        message->content = content;
+    } else if (contentType == MSG_STR) {
+        message->content.str = (char *) malloc(strlen(content.str) + 1);
+
+        if (message->content.str == NULL) {
+            // allocation failed, rollback
+            free(message);
+            return NULL;
+        }
+
+        strcpy(message->content.str, content.str);
+    } else { // unknown content type
+        // rollback
         free(message);
-        return NULL;
     }
 
-    strcpy(message->content, content);
-
     return message;
+}
+
+/**
+ * MessageFree: frees the memory of the Message object.
+ *
+ * @param message: the message to free.
+ * */
+void MessageFree(Message message) {
+    if (message) {
+        if (message->contentType == MSG_STR && message->content.str) {
+            free(message->content.str);
+        }
+
+        free(message);
+    }
 }
 
 /**
@@ -44,22 +64,7 @@ Message MessageCopy(Message other) {
         return NULL;
     }
 
-    Message copy = MessageCreate(other->content);
+    Message copy = MessageCreate(other->content, other->contentType);
 
     return copy;
-}
-
-/**
- * MessageFree: frees the memory of the Message object.
- *
- * @param message: the message to free.
- * */
-void MessageFree(Message message) {
-    if (message) {
-        if (message->content) {
-            free(message->content);
-        }
-
-        free(message);
-    }
 }

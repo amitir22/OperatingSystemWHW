@@ -10,22 +10,21 @@ struct t_message_queue {
     unsigned int size;
     Node head;
     Node tail;
+    MessageContentType messageContentType;
 
+    pthread_mutex_t lock;
     pthread_cond_t cond_get;
     pthread_cond_t cond_put;
-    pthread_mutex_t lock;
 };
-
-// TODO: MAKE SYNCHRONIZED
 
 /**
  * MQCreate: constructor for creating an MQ object.
  *
  * @param capacity: the message queue maximum capacity.
  *
- * @returns (MessageQueue) the newly created MessageQueue object
+ * @returns (MessageQueue) the newly created MessageQueue object.
  * */
-MessageQueue MQCreate(unsigned int capacity) {
+MessageQueue MQCreate(unsigned int capacity, MessageContentType messageType) {
     MessageQueue mq = (MessageQueue) malloc(sizeof(*mq));
 
     if (!mq && capacity != 0) {
@@ -36,10 +35,13 @@ MessageQueue MQCreate(unsigned int capacity) {
     mq->capacity = capacity;
     mq->head = NULL;
     mq->tail = NULL;
+    mq->messageContentType = messageType;
 
     pthread_mutex_init(&mq->lock, NULL);
     pthread_cond_init(&mq->cond_get, NULL);
     pthread_cond_init(&mq->cond_put, NULL);
+
+    return mq;
 }
 
 /**
@@ -66,6 +68,10 @@ void MQFree(MessageQueue messageQueue) {
             iterator = next;
         }
 
+        pthread_mutex_destroy(&messageQueue->lock);
+        pthread_cond_destroy(&messageQueue->cond_get);
+        pthread_cond_destroy(&messageQueue->cond_put);
+
         free(messageQueue);
     }
 }
@@ -77,14 +83,19 @@ void MQFree(MessageQueue messageQueue) {
  * @param message:      the message object to put in the queue.
  *
  * @returns (MQRetCode):
- *      MQ_ERR_NULL_ARGS - if messageQueue or message is Null
- *      MQ_ERR_MEMORY_FAIL - if a memory allocation failed.
- *      MQ_ERR_GENERAL_FAILURE - if operation failed for undocumented reason.
  *      MQ_SUCCESS - upon completion.
+ *      MQ_ERR_NULL_ARGS - if messageQueue or message is Null.
+ *      MQ_ERR_MEMORY_FAIL - if a memory allocation failed.
+ *      MQ_ERR_MISMATCH_CONTENT_TYPE - if the message content type doesn't match.
+ *      MQ_ERR_GENERAL_FAILURE - if operation failed for undocumented reason.
  * */
 MQRetCode MQPut(MessageQueue messageQueue, Message message) {
     if (!messageQueue || !message) {
         return MQ_ERR_NULL_ARGS;
+    }
+
+    if (messageQueue->messageContentType != message->contentType) {
+        return MQ_ERR_MISMATCH_CONTENT_TYPE;
     }
 
     Message messageCopy = MessageCopy(message);
@@ -105,10 +116,10 @@ MQRetCode MQPut(MessageQueue messageQueue, Message message) {
     newNode->next = NULL;
     newNode->message = messageCopy;
 
-    mutex_lock(&messageQueue->lock);
+    pthread_mutex_lock(&messageQueue->lock);
 
     while (messageQueue->size == messageQueue->capacity) {
-        cond_wait(&messageQueue->cond_get, &messageQueue->lock);
+        pthread_cond_wait(&messageQueue->cond_get, &messageQueue->lock);
     }
 
     messageQueue->tail->next = newNode;
@@ -119,8 +130,8 @@ MQRetCode MQPut(MessageQueue messageQueue, Message message) {
         messageQueue->head = messageQueue->tail;
     }
 
-    cond_signal(&messageQueue->cond_put);
-    mutex_unlock(&messageQueue->lock);
+    pthread_cond_signal(&messageQueue->cond_put);
+    pthread_mutex_unlock(&messageQueue->lock);
 
     return MQ_SUCCESS;
 }
@@ -138,26 +149,30 @@ MQRetCode MQPut(MessageQueue messageQueue, Message message) {
  *      MQ_SUCCESS - upon completion.
  * */
 MQRetCode MQGet(MessageQueue messageQueue, Message *message) {
+    Node toFree = messageQueue->head;
+
     if (!messageQueue || !message) {
         return MQ_ERR_NULL_ARGS;
     }
 
-    mutex_lock(&messageQueue->lock);
+    pthread_mutex_lock(&messageQueue->lock);
 
     while (messageQueue->size == 0) {
-        cond_wait(&messageQueue->cond_put, &messageQueue->lock);
+        pthread_cond_wait(&messageQueue->cond_put, &messageQueue->lock);
     }
 
-    *message = messageQueue->head->message;
-    --messageQueue->size;
-    messageQueue->head = messageQueue->head->next;
+    *message = toFree->message; // get the message itself from the node
+    free(toFree); // free the node memory
+
+    --messageQueue->size; // update size
+    messageQueue->head = messageQueue->head->next; // update head
 
     if (messageQueue->size == 0) {
-        messageQueue->tail = messageQueue->head;
+        messageQueue->tail = messageQueue->head; // update tail
     }
 
-    cond_signal(&messageQueue->cond_get);
-    mutex_unlock(&messageQueue->lock);
+    pthread_cond_signal(&messageQueue->cond_get);
+    pthread_mutex_unlock(&messageQueue->lock);
 
     return MQ_SUCCESS;
 }
