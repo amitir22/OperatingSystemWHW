@@ -18,7 +18,7 @@ Message MessageCreate(Content content, MessageContentType contentType) {
     message->contentType = contentType;
 
     if (contentType == MSG_INT) {
-        message->content = content;
+        message->content.fd = content;
     } else if (contentType == MSG_STR) {
         message->content.str = (char *) malloc(strlen(content.str) + 1);
 
