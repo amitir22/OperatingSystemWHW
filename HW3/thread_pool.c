@@ -27,7 +27,7 @@ ThreadPool ThreadPoolCreate(unsigned int capacity) {
         return NULL;
     }
 
-    tp->threads = (pthread_t *) malloc(capacity * sizeof(pthread_t);
+    tp->threads = (pthread_t *) malloc(capacity * sizeof(pthread_t));
 
     if (!tp->threads) {
         // rollback
@@ -37,7 +37,7 @@ ThreadPool ThreadPoolCreate(unsigned int capacity) {
         return NULL;
     }
 
-    tp->args = (pthread_t *) malloc(capacity * sizeof(void *);
+    tp->args = (void **) malloc(capacity * sizeof(void *));
 
     if (!tp->args) {
         // rollback
@@ -76,6 +76,8 @@ ThreadIndex TPAddThread(ThreadPool threadPool, ThreadFunction function, void *ar
 
     threadPool->functions[threadIndex] = function;
     threadPool->args[threadIndex] = args;
+
+    return threadIndex;
 }
 
 void TPSignalStartAll(ThreadPool threadPool) {

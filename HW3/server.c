@@ -16,8 +16,8 @@
 //
 
 // HW3: Parse the new arguments too
-void getargs(int *port, int *threadPoolSize, int *queueSize, char **schedAlg, int argc, char *argv[])
-{
+void getargs(int *port, int *threadPoolSize, int *queueSize, char **schedAlg,
+             int argc, char *argv[]) {
     if (argc < 2) {
 	    fprintf(stderr, "Usage: %s <port>\n", argv[0]);
 	    exit(1);
@@ -32,13 +32,14 @@ void getargs(int *port, int *threadPoolSize, int *queueSize, char **schedAlg, in
 }
 
 
-void threadHandleRequest(MessageQueue connectionsQueue) {
-    int currentConnFd;
+void* threadHandleRequest(void *connectionsQueuePtr) {
+    MessageQueue castedConnectionsQueue = (MessageQueue) connectionsQueuePtr;
     Message currentConnectionMessage;
     MQRetCode getRetCode;
+    int currentConnFd;
 
     while (1) {
-        getRetCode = MQGet(connectionsQueue, &currentConnectionMessage);
+        getRetCode = MQGet(castedConnectionsQueue, &currentConnectionMessage);
 
         if (getRetCode == MQ_SUCCESS) {
             currentConnFd = currentConnectionMessage->content.fd;
@@ -46,6 +47,8 @@ void threadHandleRequest(MessageQueue connectionsQueue) {
             Close(currentConnFd);
         }
     }
+
+    return NULL;
 }
 
 int main(int argc, char *argv[])
