@@ -1,14 +1,23 @@
 #ifndef THREAD_POOL_H
 #define THREAD_POOL_H
 
+#include <stdlib.h>
+#include <pthread.h>
+
 typedef struct t_thread_pool *ThreadPool;
+
+typedef void *ThreadFunction(void*);
 
 typedef enum e_mq_return_code {
     TP_SUCCESS,
     TP_FAIL
 } TPRetCode;
 
-ThreadPool ThreadPoolCreate();
+typedef int ThreadIndex;
+
+ThreadPool ThreadPoolCreate(unsigned int capacity)
 void ThreadPoolFree(ThreadPool threadPool);
+ThreadIndex TPAddThread(ThreadPool threadPool, ThreadFunction function);
+void TPSignalStartAll(ThreadPool threadPool);
 
 #endif //THREAD_POOL_H
