@@ -1,6 +1,7 @@
 #include "segel.h"
 #include "request.h"
 #include "message_queue.h"
+#include "thread_pool.h"
 
 #define SCHED_ALG_MAX_SIZE 7
 
@@ -53,6 +54,7 @@ int main(int argc, char *argv[])
     Message connectionMessage;
     Content connectionMessageContent;
     MQRetCode putRetCode;
+    ThreadPool threadPool;
 
     int listenfd, connfd, clientlen;
     int port, threadPoolSize, queueSize; // todo: make unsigned?
@@ -68,11 +70,23 @@ int main(int argc, char *argv[])
     fprintf(stdout, "queue size: %d\n", queueSize);
     fprintf(stdout, "sched-algo: %s\n", schedAlgo);
 
+    threadPool = ThreadPoolCreate(threadPoolSize);
+
+    if (!threadPool) {
+        return -1;
+    }
+
     connectionsQueue = MQCreate(queueSize, MSG_INT);
 
-    // 
-    // HW3: Create some threads...
-    //
+    if (!connectionsQueue) {
+        return -1;
+    }
+
+    for (int i = 0; i < threadPoolSize; i++) {
+        TPAddThread(threadPool, threadHandleRequest, connectionsQueue);
+    }
+
+    TPSignalStartAll(threadPool);
 
     listenfd = Open_listenfd(port);
 
@@ -97,9 +111,9 @@ int main(int argc, char *argv[])
 	    //
 
 	    // while(1) {
-	    // connectionQueue.get(connfd);
-	    requestHandle(connfd);
-	    Close(connfd);
+	    //     connectionQueue.get(connfd);
+        //     requestHandle(connfd);
+        //     Close(connfd);
         // }
     }
 }

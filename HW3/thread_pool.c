@@ -5,6 +5,7 @@ struct t_thread_pool {
     unsigned int size;
 
     ThreadFunction *functions;
+    void **args;
     pthread_t *threads;
 };
 
@@ -17,7 +18,7 @@ ThreadPool ThreadPoolCreate(unsigned int capacity) {
 
     tp->capacity = capacity;
     tp->size = 0;
-    tp->functions = (ThreadFunction *) malloc(capacity * sizeof(*(tp->functions))); // todo: make sure
+    tp->functions = (ThreadFunction *) malloc(capacity * sizeof(ThreadFunction));
 
     if (!tp->functions) {
         // rollback
@@ -31,6 +32,17 @@ ThreadPool ThreadPoolCreate(unsigned int capacity) {
     if (!tp->threads) {
         // rollback
         free(tp->functions);
+        free(tp);
+
+        return NULL;
+    }
+
+    tp->args = (pthread_t *) malloc(capacity * sizeof(void *);
+
+    if (!tp->args) {
+        // rollback
+        free(tp->functions);
+        free(tp->threads);
         free(tp);
 
         return NULL;
@@ -53,18 +65,24 @@ void ThreadPoolFree(ThreadPool threadPool) {
     }
 }
 
-ThreadIndex TPAddThread(ThreadPool threadPool, ThreadFunction function) {
-    ThreadIndex threadIndex = threadPool->size;
+ThreadIndex TPAddThread(ThreadPool threadPool, ThreadFunction function, void *args) {
+    ThreadIndex threadIndex;
 
     if (!threadPool) {
         return -1;
     }
 
+    threadIndex = threadPool->size;
+
     threadPool->functions[threadIndex] = function;
+    threadPool->args[threadIndex] = args;
 }
 
 void TPSignalStartAll(ThreadPool threadPool) {
+    pthread_t currentTID;
+
     for (int i = 0; i < threadPool->size; ++i) {
-        pthread_create(threadPool->threads + i, NULL, threadPool->functions[i], NULL);
+        pthread_create(&currentTID, NULL, threadPool->functions[i], threadPool->args[i]);
+        threadPool->threads[i] = currentTID;
     }
 }
