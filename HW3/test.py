@@ -1,10 +1,6 @@
 from subprocess import PIPE, check_output as run
 from threading import Thread, current_thread
 from os import chdir, getcwd
-#from os.path import abspath
-
-
-path = '/home/student/CLionProjects/OperatingSystemWHW/HW3'
 
 
 def send_requests():
