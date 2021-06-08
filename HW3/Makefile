@@ -14,7 +14,7 @@ LIBS = -lpthread
 
 all: server client output.cgi
 	-mkdir -p public
-	-cp output.cgi favicon.ico *.html public
+	-cp output.cgi favicon.ico *.html *.txt public
 
 server: server.o request.o segel.o message_queue.o message.o thread_pool.o
 	$(CC) $(CFLAGS) -o server server.o request.o segel.o message_queue.o message.o \

@@ -16,5 +16,6 @@ ThreadPool ThreadPoolCreate(unsigned int capacity);
 void ThreadPoolFree(ThreadPool threadPool);
 ThreadIndex TPAddThread(ThreadPool threadPool, ThreadFunction function, void *args);
 void TPSignalStartAll(ThreadPool threadPool);
+unsigned int TPGetPoolSize(ThreadPool threadPool);
 
 #endif //THREAD_POOL_H

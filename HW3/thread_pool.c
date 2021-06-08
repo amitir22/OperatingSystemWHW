@@ -107,3 +107,11 @@ void TPSignalStartAll(ThreadPool threadPool) {
 
     log("TPSignalStartAll: done\n");
 }
+
+unsigned int TPGetPoolSize(ThreadPool threadPool) {
+    if (!threadPool) {
+        return -1; // todo: maybe define macro: INVALID_VALUE
+    }
+
+    return threadPool->capacity;
+}

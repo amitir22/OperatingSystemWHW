@@ -6,16 +6,6 @@
 
 #define SCHED_ALG_MAX_SIZE 7
 
-// 
-// server.c: A very, very simple web server
-//
-// To run:
-//  ./server <portnum (above 2000)>
-//
-// Repeatedly handles HTTP requests sent to this port number.
-// Most of the work is done within routines written in request.c
-//
-
 // HW3: Parse the new arguments too
 void getargs(int *port, int *threadPoolSize, int *queueSize, char **schedAlg,
              int argc, char *argv[]) {
@@ -48,6 +38,9 @@ void* threadHandleRequest(void *connectionsQueuePtr) {
             currentConnFd = currentConnectionMessage->content.fd;
             requestHandle(currentConnFd);
             Close(currentConnFd);
+        } else {
+            log("\"threadHandleRequest: error with MQGet \n");
+            break;
         }
 
         log("threadHandleRequest: iteration done\n");
@@ -56,76 +49,111 @@ void* threadHandleRequest(void *connectionsQueuePtr) {
     return NULL;
 }
 
-int main(int argc, char *argv[])
-{
+int initTP(ThreadPool *threadPool, int threadPoolSize) {
+    *threadPool = ThreadPoolCreate(threadPoolSize);
+
+    if (!(*threadPool)) {
+        return 0;
+    }
+
+    return 1;
+}
+
+int initMQ(MessageQueue *connectionsQueue, int queueSize, char *schedAlgo) {
+    *connectionsQueue = MQCreate(queueSize, MSG_INT, schedAlgo);
+
+    if (!(*connectionsQueue)) {
+        return 0;
+    }
+
+    return 1;
+}
+
+int initServerDataStructures(ThreadPool *threadPool, int threadPoolSize, char *schedAlgo,
+                             MessageQueue *connectionsQueue, int queueSize) {
+    if (initTP(threadPool, threadPoolSize)) {
+        log("initServerDataStructures: initTP successful\n");
+
+        if (initMQ(connectionsQueue, queueSize, schedAlgo)) {
+            log("initServerDataStructures: initMQ successful\n");
+
+            return 1;
+        } else {
+            // rollback
+            log("initServerDataStructures: initMQ failed, rolling back\n");;
+            ThreadPoolFree(*threadPool);
+            log("initServerDataStructures: rollback successful, threadPool has been freed\n");
+        }
+    }
+
+    return 0;
+}
+
+void initWorkerThreads(ThreadPool threadPool, MessageQueue connectionsQueue) {
+    for (int i = 0; i < TPGetPoolSize(threadPool); i++) {
+        TPAddThread(threadPool, threadHandleRequest, connectionsQueue);
+    }
+}
+
+int startServer(int port, int threadPoolSize, int queueSize, char *schedAlgo) {
+    int listenfd, connfd, clientlen, droppedConnFD;
+    ThreadPool threadPool;
     MessageQueue connectionsQueue;
     Message connectionMessage;
     Content connectionMessageContent;
+    Content droppedConnectionContent;
     MQRetCode putRetCode;
-    ThreadPool threadPool;
+    struct sockaddr_in clientaddr;
 
-    int listenfd, connfd, clientlen;
+    if (initServerDataStructures(&threadPool, threadPoolSize, schedAlgo, &connectionsQueue, queueSize)) {
+        initWorkerThreads(threadPool, connectionsQueue);
+
+        TPSignalStartAll(threadPool);
+
+        listenfd = Open_listenfd(port);
+
+        while (1) {
+            clientlen = sizeof(clientaddr);
+            connfd = Accept(listenfd, (SA *)&clientaddr, (socklen_t *) &clientlen);
+
+            connectionMessageContent.fd = connfd;
+            connectionMessage = MessageCreate(connectionMessageContent, MSG_INT);
+
+            putRetCode = MQPut(connectionsQueue, connectionMessage, &droppedConnectionContent);
+
+            if (putRetCode == MQ_DROP) {
+                droppedConnFD = droppedConnectionContent.fd;
+
+                // todo: remove
+                printf("server.c: closing: %d\n", droppedConnFD);
+
+                Close(droppedConnFD);
+            } else if (putRetCode == MQ_SUCCESS) {
+                continue;
+            } else {
+                log("server.c: MQPUT failed.\n");
+                break;
+            }
+        }
+    }
+
+    return 0;
+}
+
+int main(int argc, char *argv[]) {
     int port, threadPoolSize, queueSize; // todo: make unsigned?
     char *schedAlgo = (char *) malloc(SCHED_ALG_MAX_SIZE);
 
-    struct sockaddr_in clientaddr;
-
     getargs(&port, &threadPoolSize, &queueSize, &schedAlgo, argc, argv);
 
-    // todo: remove
-    fprintf(stdout, "port: %d\n", port);
-    fprintf(stdout, "thread pool size: %d\n", threadPoolSize);
-    fprintf(stdout, "queue size: %d\n", queueSize);
-    fprintf(stdout, "sched-algo: %s\n", schedAlgo);
-
-    threadPool = ThreadPoolCreate(threadPoolSize);
-
-    if (!threadPool) {
-        return -1;
+    if (IS_DEBUG) {
+        fprintf(stdout, "port: %d\n", port);
+        fprintf(stdout, "thread pool size: %d\n", threadPoolSize);
+        fprintf(stdout, "queue size: %d\n", queueSize);
+        fprintf(stdout, "sched-algo: %s\n", schedAlgo);
     }
 
-    connectionsQueue = MQCreate(queueSize, MSG_INT);
-
-    if (!connectionsQueue) {
-        return -1;
-    }
-
-    for (int i = 0; i < threadPoolSize; i++) {
-        TPAddThread(threadPool, threadHandleRequest, connectionsQueue);
-    }
-
-    TPSignalStartAll(threadPool);
-
-    listenfd = Open_listenfd(port);
-
-    while (1) {
-	    clientlen = sizeof(clientaddr);
-	    connfd = Accept(listenfd, (SA *)&clientaddr, (socklen_t *) &clientlen);
-
-        connectionMessageContent.fd = connfd;
-	    connectionMessage = MessageCreate(connectionMessageContent, MSG_INT);
-
-        putRetCode = MQPut(connectionsQueue, connectionMessage);
-
-        if (putRetCode == MQ_SUCCESS) {
-            continue;
-        } else {
-            log("server.c: MQPUT failed.\n");
-        }
-        // todo: handle putRetCode?
-
-	    //
-	    // HW3: In general, don't handle the request in the main thread.
-	    // Save the relevant info in a buffer and have one of the worker threads
-	    // do the work.
-	    //
-
-	    // while(1) {
-	    //     connectionQueue.get(connfd);
-        //     requestHandle(connfd);
-        //     Close(connfd);
-        // }
-    }
+    return startServer(port, threadPoolSize, queueSize, schedAlgo);
 }
 
 
