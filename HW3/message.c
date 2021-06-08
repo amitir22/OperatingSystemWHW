@@ -10,6 +10,8 @@
 Message MessageCreate(Content content, MessageContentType contentType) {
     Message message = (Message) malloc(sizeof(*message));
 
+    log("MessageCreate: start\n");
+
     if (!message) {
         // allocation failed
         return NULL;
@@ -23,7 +25,7 @@ Message MessageCreate(Content content, MessageContentType contentType) {
         message->content.str = (char *) malloc(strlen(content.str) + 1);
 
         if (message->content.str == NULL) {
-            // allocation failed, rollback
+            // rollback
             free(message);
             return NULL;
         }
@@ -32,7 +34,16 @@ Message MessageCreate(Content content, MessageContentType contentType) {
     } else { // unknown content type
         // rollback
         free(message);
+        return NULL;
     }
+
+    if (!message) {
+        log("MessageCreate: failed\n");
+
+        return NULL;
+    }
+
+    log("MessageCreate: done\n");
 
     return message;
 }
@@ -43,6 +54,8 @@ Message MessageCreate(Content content, MessageContentType contentType) {
  * @param message: the message to free.
  * */
 void MessageFree(Message message) {
+    log("MessageFree: start\n");
+
     if (message) {
         if (message->contentType == MSG_STR && message->content.str) {
             free(message->content.str);
@@ -50,6 +63,8 @@ void MessageFree(Message message) {
 
         free(message);
     }
+
+    log("MessageFree: done\n");
 }
 
 /**
@@ -60,11 +75,17 @@ void MessageFree(Message message) {
  * @returns: a copy of the given `other` message.
  * */
 Message MessageCopy(Message other) {
+    Message copy;
+
+    log("MessageCopy: start\n");
+
     if (!other) {
         return NULL;
     }
 
-    Message copy = MessageCreate(other->content, other->contentType);
+    copy = MessageCreate(other->content, other->contentType);
+
+    log("MessageCopy: done\n");
 
     return copy;
 }

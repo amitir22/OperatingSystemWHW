@@ -3,6 +3,7 @@
 
 #include <pthread.h>
 #include "message.h"
+#include "logger.h"
 
 typedef struct t_message_queue *MessageQueue;
 

@@ -2,6 +2,7 @@
 #include "request.h"
 #include "message_queue.h"
 #include "thread_pool.h"
+#include "logger.h"
 
 #define SCHED_ALG_MAX_SIZE 7
 
@@ -38,6 +39,8 @@ void* threadHandleRequest(void *connectionsQueuePtr) {
     MQRetCode getRetCode;
     int currentConnFd;
 
+    log("threadHandleRequest: start\n");
+
     while (1) {
         getRetCode = MQGet(castedConnectionsQueue, &currentConnectionMessage);
 
@@ -46,6 +49,8 @@ void* threadHandleRequest(void *connectionsQueuePtr) {
             requestHandle(currentConnFd);
             Close(currentConnFd);
         }
+
+        log("threadHandleRequest: iteration done\n");
     }
 
     return NULL;
@@ -104,6 +109,8 @@ int main(int argc, char *argv[])
 
         if (putRetCode == MQ_SUCCESS) {
             continue;
+        } else {
+            log("server.c: MQPUT failed.\n");
         }
         // todo: handle putRetCode?
 

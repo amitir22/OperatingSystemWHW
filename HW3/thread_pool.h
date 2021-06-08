@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include "message_queue.h"
+#include "logger.h"
 
 typedef struct t_thread_pool *ThreadPool;
 

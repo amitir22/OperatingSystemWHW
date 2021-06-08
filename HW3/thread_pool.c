@@ -12,6 +12,8 @@ struct t_thread_pool {
 ThreadPool ThreadPoolCreate(unsigned int capacity) {
     ThreadPool tp = (ThreadPool) malloc(sizeof(*tp));
 
+    log("ThreadPoolCreate: start\n");
+
     if (!tp) {
         return NULL;
     }
@@ -48,10 +50,14 @@ ThreadPool ThreadPoolCreate(unsigned int capacity) {
         return NULL;
     }
 
+    log("ThreadPoolCreate: done\n");
+
     return tp;
 }
 
 void ThreadPoolFree(ThreadPool threadPool) {
+    log("ThreadPoolFree: start\n");
+
     if (threadPool) {
         if (threadPool->functions) {
             free(threadPool->functions);
@@ -63,19 +69,25 @@ void ThreadPoolFree(ThreadPool threadPool) {
 
         free(threadPool);
     }
+
+    log("ThreadPoolFree: done\n");
 }
 
 ThreadIndex TPAddThread(ThreadPool threadPool, ThreadFunction function, void *args) {
     ThreadIndex threadIndex;
 
+    log("TPAddThread: start\n");
+
     if (!threadPool) {
         return -1;
     }
 
-    threadIndex = threadPool->size;
+    threadIndex = threadPool->size++;
 
     threadPool->functions[threadIndex] = function;
     threadPool->args[threadIndex] = args;
+
+    log("TPAddThread: done\n");
 
     return threadIndex;
 }
@@ -83,8 +95,15 @@ ThreadIndex TPAddThread(ThreadPool threadPool, ThreadFunction function, void *ar
 void TPSignalStartAll(ThreadPool threadPool) {
     pthread_t currentTID;
 
+    log("TPSignalStartAll: start\n");
+
     for (int i = 0; i < threadPool->size; ++i) {
         pthread_create(&currentTID, NULL, threadPool->functions[i], threadPool->args[i]);
         threadPool->threads[i] = currentTID;
+
+        // todo: remove:
+        printf("TPSignalStartAll: thread id: %ld created\n", currentTID);
     }
+
+    log("TPSignalStartAll: done\n");
 }
