@@ -81,3 +81,4 @@ fabric.properties
 /HW3/server
 /HW3/output.cgi
 /HW3/public/*
+/HW3/valgrind.output
