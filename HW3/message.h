@@ -18,6 +18,7 @@ typedef enum e_message_content_type {
 typedef struct t_message {
     Content content;
     MessageContentType contentType;
+    // todo: add metadata variables
 } *Message;
 
 Message MessageCreate(Content content, MessageContentType type);
