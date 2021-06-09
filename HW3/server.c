@@ -201,8 +201,9 @@ int startServer(int port, int threadPoolSize, int queueSize, char *schedAlgo) {
             if (putRetCode == MQ_DROP) {
                 droppedConnFD = droppedConnectionContent.fd;
 
-                // todo: remove
-                printf("server.c: closing: %d\n", droppedConnFD);
+                if (IS_DEBUG) {
+                    printf("server.c: closing: %d\n", droppedConnFD);
+                }
 
                 Close(droppedConnFD);
             } else if (putRetCode == MQ_SUCCESS) {
@@ -218,7 +219,7 @@ int startServer(int port, int threadPoolSize, int queueSize, char *schedAlgo) {
 }
 
 int main(int argc, char *argv[]) {
-    int port, threadPoolSize, queueSize; // todo: make unsigned?
+    int port, threadPoolSize, queueSize;
     char *schedAlgo = (char *) malloc(SCHED_ALG_MAX_SIZE);
 
     getargs(&port, &threadPoolSize, &queueSize, &schedAlgo, argc, argv);

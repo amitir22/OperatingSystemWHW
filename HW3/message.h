@@ -30,7 +30,6 @@ typedef struct t_message {
     Content content;
     MessageContentType contentType;
     MessageMetaData metaData;
-    // todo: add metadata variables
 } *Message;
 
 Message MessageCreate(Content content, MessageContentType type, MessageMetaData metaData);

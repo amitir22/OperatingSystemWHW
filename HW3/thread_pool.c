@@ -79,7 +79,7 @@ ThreadIndex TPAddThread(ThreadPool threadPool, ThreadFunction function, void *ar
     log("TPAddThread: start\n");
 
     if (!threadPool) {
-        return -1;
+        return HW3_INVALID_VALUE;
     }
 
     threadIndex = threadPool->size++;
@@ -101,7 +101,6 @@ void TPSignalStartAll(ThreadPool threadPool) {
         pthread_create(&currentTID, NULL, threadPool->functions[i], threadPool->args[i]);
         threadPool->threads[i] = currentTID;
 
-        // todo: remove:
         if (IS_DEBUG) {
             printf("TPSignalStartAll: thread id: %ld created\n", currentTID);
         }
@@ -112,7 +111,7 @@ void TPSignalStartAll(ThreadPool threadPool) {
 
 unsigned int TPGetPoolSize(ThreadPool threadPool) {
     if (!threadPool) {
-        return -1; // todo: maybe define macro: INVALID_VALUE
+        return HW3_INVALID_VALUE;
     }
 
     return threadPool->capacity;

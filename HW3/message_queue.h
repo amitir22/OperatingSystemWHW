@@ -24,11 +24,11 @@ typedef enum e_mq_sched_policy {
     DROP_RANDOM
 } MQSchedPolicy;
 
-MessageQueue MQCreate(unsigned int capacity, MessageContentType messageType, char *schedAlgo);
+MessageQueue MQCreate(int capacity, MessageContentType messageType, char *schedAlgo);
 void MQFree(MessageQueue messageQueue);
 MQRetCode MQPut(MessageQueue messageQueue, Message message, Content *dropped);
 MQRetCode MQGet(MessageQueue messageQueue, Message *message);
-unsigned int MQGetSize(MessageQueue messageQueue);
-unsigned int MQGetCapacity(MessageQueue messageQueue);
+int MQGetSize(MessageQueue messageQueue);
+int MQGetCapacity(MessageQueue messageQueue);
 
 #endif //MESSAGE_QUEUE_H

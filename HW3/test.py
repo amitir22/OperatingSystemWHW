@@ -5,10 +5,10 @@ from threading import Thread, current_thread
 def send_requests():
     for i in range(10):
         print(current_thread())
-        print(i)
-        ilen = len(run(args=('/home/student/CLionProjects/OperatingSystemWHW/HW3/client',
-                             'localhost', '4096', 'output.cgi')))
-        print(ilen)
+        print('iteration: ' + str(i))
+        response = run(args=('/home/student/CLionProjects/OperatingSystemWHW/HW3/client',
+                             'localhost', '4096', 'output.cgi'))
+        print(response.decode('utf-8'))
 
 
 def main():

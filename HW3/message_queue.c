@@ -6,8 +6,8 @@ typedef struct t_node {
 } *Node;
 
 struct t_message_queue {
-    unsigned int capacity;
-    unsigned int size;
+    int capacity;
+    int size;
     Node head;
     Node tail;
     MessageContentType messageContentType;
@@ -34,14 +34,14 @@ MQSchedPolicy stringToPolicy(char *schedAlgo) {
     } else if (0 == strcmp(schedAlgo, randomPolicy)) {
         return DROP_RANDOM;
     } else {
-        // TODO: error - unknown policy
+        log("message_queue.c: stringToPolicy: unknown policy\n");
         return INVALID;
     }
 }
 
 int calcNumToRandomDrop(MessageQueue messageQueue) {
     if (!messageQueue) {
-        return -1;
+        return HW3_INVALID_VALUE;
     }
 
     return (int) (0.25 * messageQueue->capacity);
@@ -54,7 +54,7 @@ int calcNumToRandomDrop(MessageQueue messageQueue) {
  *
  * @returns (MessageQueue) the newly created MessageQueue object.
  * */
-MessageQueue MQCreate(unsigned int capacity, MessageContentType messageType, char *schedAlgo) {
+MessageQueue MQCreate(int capacity, MessageContentType messageType, char *schedAlgo) {
     MessageQueue mq = (MessageQueue) malloc(sizeof(*mq));
 
     log("MQCreate: start\n");
@@ -69,6 +69,14 @@ MessageQueue MQCreate(unsigned int capacity, MessageContentType messageType, cha
     mq->tail = NULL;
     mq->messageContentType = messageType;
     mq->schedPolicy = stringToPolicy(schedAlgo);
+
+    if (mq->schedPolicy == INVALID) {
+        //  rollback
+        free(mq);
+        mq = NULL;
+
+        return NULL;
+    }
 
     pthread_mutex_init(&mq->lock, NULL);
     pthread_cond_init(&mq->cond_get, NULL);
@@ -298,9 +306,9 @@ MQRetCode MQGet(MessageQueue messageQueue, Message *message) {
  *
  * @param messageQueue: the target message queue object.
  *
- * @returns (unsigned int) the current size of the queue.
+ * @returns (int) the current size of the queue.
  * */
-unsigned int MQGetSize(MessageQueue messageQueue) {
+int MQGetSize(MessageQueue messageQueue) {
     return messageQueue->size;
 }
 
@@ -312,8 +320,8 @@ unsigned int MQGetSize(MessageQueue messageQueue) {
  *
  * @param messageQueue: the target message queue object.
  *
- * @returns (unsigned int) the maximum capacity of the queue.
+ * @returns (int) the maximum capacity of the queue.
  * */
-unsigned int MQGetCapacity(MessageQueue messageQueue) {
+int MQGetCapacity(MessageQueue messageQueue) {
     return messageQueue->capacity;
 }
