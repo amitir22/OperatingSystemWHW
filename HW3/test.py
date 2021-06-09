@@ -8,7 +8,7 @@ def send_requests():
         print(current_thread())
         print(i)
         ilen = len(run(args=('/home/student/CLionProjects/OperatingSystemWHW/HW3/client',
-                             'localhost', '4096', 'big.txt')))
+                             'localhost', '4096', 'output.cgi')))
         print(ilen)
 
 

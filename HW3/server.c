@@ -121,6 +121,8 @@ int startServer(int port, int threadPoolSize, int queueSize, char *schedAlgo) {
 
             putRetCode = MQPut(connectionsQueue, connectionMessage, &droppedConnectionContent);
 
+            MessageFree(connectionMessage);
+
             if (putRetCode == MQ_DROP) {
                 droppedConnFD = droppedConnectionContent.fd;
 

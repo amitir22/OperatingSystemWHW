@@ -15,6 +15,15 @@ typedef enum e_message_content_type {
     MSG_STR
 } MessageContentType;
 
+typedef struct t_message_meta_data {
+    int arrivalTime;
+    int dispatchTime;
+    int threadID;
+    int threadCount;
+    int numStaticRequests;
+    int numDynamicRequests;
+} MessageMetaData;
+
 typedef struct t_message {
     Content content;
     MessageContentType contentType;
