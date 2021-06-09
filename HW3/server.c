@@ -43,7 +43,10 @@ void* workerThreadJob(void *params) {
     MessageMetaData currentMessageMetaData;
     MQRetCode getRetCode;
     int currentConnFd;
-    int currentThreadCount = 0;
+    int currentThreadJobCount = 0;
+    int currentThreadDynamicCount = 0;
+    int currentThreadStaticCount = 0;
+    int currentIsStatic;
 
     log("workerThreadJob: start\n");
 
@@ -56,19 +59,28 @@ void* workerThreadJob(void *params) {
 
         if (getRetCode == MQ_SUCCESS) {
             currentConnFd = currentConnectionMessage->content.fd;
-            ++currentThreadCount;
-            currentMessageMetaData->requestsCount = currentThreadCount;
-            currentMessageMetaData->numStaticRequests = 0; // TODO:
-            currentMessageMetaData->numDynamicRequests = 0; // TODO:
+            ++currentThreadJobCount;
+            currentMessageMetaData->requestsCount = currentThreadJobCount;
+            currentMessageMetaData->numStaticRequests = currentThreadStaticCount; // TODO:
+            currentMessageMetaData->numDynamicRequests = currentThreadDynamicCount; // TODO:
 
             if (IS_DEBUG) {
                 printf("workerThreadJob: %d, Metadata:\n", currentMessageMetaData->threadID);
                 printf("\trequest count: %d\n", currentMessageMetaData->requestsCount);
+                printf("\tstatic count: %d\n", currentMessageMetaData->numStaticRequests);
+                printf("\tdynamic count: %d\n", currentMessageMetaData->numDynamicRequests);
                 printf("\tarrival time: %ld\n", currentMessageMetaData->arrivalTime.tv_usec);
                 printf("\tdispatch time: %ld\n", currentMessageMetaData->dispatchTime.tv_usec);
             }
 
-            requestHandle(currentConnFd, currentMessageMetaData); // todo: edit function to include statistics headers in response
+            currentIsStatic = requestHandle(currentConnFd, currentMessageMetaData); // todo: edit function to include statistics headers in response
+
+            // updating thread counters
+            if (currentIsStatic) {
+                ++currentThreadStaticCount;
+            } else {
+                ++currentThreadDynamicCount;
+            }
 
             free(currentMessageMetaData);
 

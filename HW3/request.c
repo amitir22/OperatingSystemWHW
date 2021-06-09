@@ -55,7 +55,7 @@ void requestReadhdrs(rio_t *rp)
 // Return 1 if static, 0 if dynamic content
 // Calculates filename (and cgiargs, for dynamic) from uri
 //
-int requestParseURI(char *uri, char *filename, char *cgiargs) 
+int requestParseURI(char *uri, char *filename, char *cgiargs)
 {
    char *ptr;
 
@@ -101,7 +101,7 @@ void requestGetFiletype(char *filename, char *filetype)
       strcpy(filetype, "text/plain");
 }
 
-void requestServeDynamic(int fd, char *filename, char *cgiargs)
+void requestServeDynamic(int fd, char *filename, char *cgiargs, MessageMetaData metaData)
 {
    char buf[MAXLINE], *emptylist[] = {NULL};
 
@@ -109,6 +109,12 @@ void requestServeDynamic(int fd, char *filename, char *cgiargs)
    // The CGI script has to finish writing out the header.
    sprintf(buf, "HTTP/1.0 200 OK\r\n");
    sprintf(buf, "%sServer: OS-HW3 Web Server\r\n", buf);
+    sprintf(buf, "%sStat-req-arrival: %ld\r\n", buf, metaData->arrivalTime.tv_usec);
+    sprintf(buf, "%sStat-req-dispatch: %ld\r\n", buf, metaData->dispatchTime.tv_usec);
+    sprintf(buf, "%sStat-thread-id: %d\r\n", buf, metaData->threadID);
+    sprintf(buf, "%sStat-thread-count: %d\r\n", buf, metaData->requestsCount);
+    sprintf(buf, "%sStat-thread-static: %d\r\n", buf, metaData->numStaticRequests);
+    sprintf(buf, "%sStat-thread-dynamic: %d\r\n", buf, metaData->numDynamicRequests);
 
    Rio_writen(fd, buf, strlen(buf));
 
@@ -123,25 +129,30 @@ void requestServeDynamic(int fd, char *filename, char *cgiargs)
 }
 
 
-void requestServeStatic(int fd, char *filename, int filesize) 
-{
-   int srcfd;
-   char *srcp, filetype[MAXLINE], buf[MAXBUF];
+void requestServeStatic(int fd, char *filename, int filesize, MessageMetaData metaData) {
+    int srcfd;
+    char *srcp, filetype[MAXLINE], buf[MAXBUF];
 
-   requestGetFiletype(filename, filetype);
+    requestGetFiletype(filename, filetype);
 
-   srcfd = Open(filename, O_RDONLY, 0);
+    srcfd = Open(filename, O_RDONLY, 0);
 
-   // Rather than call read() to read the file into memory, 
-   // which would require that we allocate a buffer, we memory-map the file
-   srcp = Mmap(0, filesize, PROT_READ, MAP_PRIVATE, srcfd, 0);
-   Close(srcfd);
+    // Rather than call read() to read the file into memory,
+    // which would require that we allocate a buffer, we memory-map the file
+    srcp = Mmap(0, filesize, PROT_READ, MAP_PRIVATE, srcfd, 0);
+    Close(srcfd);
 
-   // put together response
-   sprintf(buf, "HTTP/1.0 200 OK\r\n");
-   sprintf(buf, "%sServer: OS-HW3 Web Server\r\n", buf);
-   sprintf(buf, "%sContent-Length: %d\r\n", buf, filesize);
-   sprintf(buf, "%sContent-Type: %s\r\n\r\n", buf, filetype);
+    // put together response
+    sprintf(buf, "HTTP/1.0 200 OK\r\n");
+    sprintf(buf, "%sServer: OS-HW3 Web Server\r\n", buf);
+    sprintf(buf, "%sContent-Length: %d\r\n", buf, filesize);
+    sprintf(buf, "%sContent-Type: %s\r\n", buf, filetype);
+    sprintf(buf, "%sStat-req-arrival: %ld\r\n", buf, metaData->arrivalTime.tv_usec);
+    sprintf(buf, "%sStat-req-dispatch: %ld\r\n", buf, metaData->dispatchTime.tv_usec);
+    sprintf(buf, "%sStat-thread-id: %d\r\n", buf, metaData->threadID);
+    sprintf(buf, "%sStat-thread-count: %d\r\n", buf, metaData->requestsCount);
+    sprintf(buf, "%sStat-thread-static: %d\r\n", buf, metaData->numStaticRequests);
+    sprintf(buf, "%sStat-thread-dynamic: %d\r\n\r\n", buf, metaData->numDynamicRequests);
 
    Rio_writen(fd, buf, strlen(buf));
 
@@ -152,7 +163,7 @@ void requestServeStatic(int fd, char *filename, int filesize)
 }
 
 // handle a request
-void requestHandle(int fd, MessageMetaData metaData) {
+int requestHandle(int fd, MessageMetaData metaData) {
    int is_static;
    struct stat sbuf;
    char buf[MAXLINE], method[MAXLINE], uri[MAXLINE], version[MAXLINE];
@@ -167,29 +178,35 @@ void requestHandle(int fd, MessageMetaData metaData) {
 
    if (strcasecmp(method, "GET")) {
       requestError(fd, method, "501", "Not Implemented", "OS-HW3 Server does not implement this method");
-      return;
+      return HW3_INVALID_VALUE;
    }
    requestReadhdrs(&rio);
 
    is_static = requestParseURI(uri, filename, cgiargs);
    if (stat(filename, &sbuf) < 0) {
       requestError(fd, filename, "404", "Not found", "OS-HW3 Server could not find this file");
-      return;
+      return HW3_INVALID_VALUE;
    }
 
    if (is_static) {
       if (!(S_ISREG(sbuf.st_mode)) || !(S_IRUSR & sbuf.st_mode)) {
          requestError(fd, filename, "403", "Forbidden", "OS-HW3 Server could not read this file");
-         return;
+         return HW3_INVALID_VALUE;
       }
-      requestServeStatic(fd, filename, sbuf.st_size);
+
+      ++metaData->numStaticRequests;
+      requestServeStatic(fd, filename, sbuf.st_size, metaData);
    } else {
       if (!(S_ISREG(sbuf.st_mode)) || !(S_IXUSR & sbuf.st_mode)) {
          requestError(fd, filename, "403", "Forbidden", "OS-HW3 Server could not run this CGI program");
-         return;
+         return HW3_INVALID_VALUE;
       }
-      requestServeDynamic(fd, filename, cgiargs);
+
+       ++metaData->numDynamicRequests;
+      requestServeDynamic(fd, filename, cgiargs, metaData);
    }
+
+    return is_static;
 }
 
 

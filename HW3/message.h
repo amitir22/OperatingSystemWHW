@@ -5,6 +5,8 @@
 #include <string.h>
 #include "logger.h"
 
+#define HW3_INVALID_VALUE (-1)
+
 typedef union u_content {
     int fd;
     char *str;

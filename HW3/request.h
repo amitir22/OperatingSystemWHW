@@ -2,6 +2,6 @@
 
 #include "message.h"
 
-void requestHandle(int fd, MessageMetaData metaData);
+int requestHandle(int fd, MessageMetaData metaData);
 
 #endif
