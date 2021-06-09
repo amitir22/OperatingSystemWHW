@@ -1,5 +1,7 @@
 #ifndef __REQUEST_H__
 
-void requestHandle(int fd);
+#include "message.h"
+
+void requestHandle(int fd, MessageMetaData metaData);
 
 #endif

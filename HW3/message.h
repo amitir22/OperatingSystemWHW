@@ -16,22 +16,25 @@ typedef enum e_message_content_type {
 } MessageContentType;
 
 typedef struct t_message_meta_data {
-    int arrivalTime;
-    int dispatchTime;
+    struct timeval arrivalTime;
+    struct timeval dispatchTime;
     int threadID;
-    int threadCount;
+    int requestsCount;
     int numStaticRequests;
     int numDynamicRequests;
-} MessageMetaData;
+} *MessageMetaData;
 
 typedef struct t_message {
     Content content;
     MessageContentType contentType;
+    MessageMetaData metaData;
     // todo: add metadata variables
 } *Message;
 
-Message MessageCreate(Content content, MessageContentType type);
+Message MessageCreate(Content content, MessageContentType type, MessageMetaData metaData);
 void MessageFree(Message message);
 Message MessageCopy(Message other);
+
+MessageMetaData buildMessageMetaData();
 
 #endif //MESSAGE_H

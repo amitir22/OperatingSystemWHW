@@ -7,7 +7,7 @@
  *
  * @returns: a Message object (or NULL if fails).
  * */
-Message MessageCreate(Content content, MessageContentType contentType) {
+Message MessageCreate(Content content, MessageContentType contentType, MessageMetaData metaData) {
     Message message = (Message) malloc(sizeof(*message));
 
     log("MessageCreate: start\n");
@@ -18,6 +18,7 @@ Message MessageCreate(Content content, MessageContentType contentType) {
     }
 
     message->contentType = contentType;
+    message->metaData = metaData;
 
     if (contentType == MSG_INT) {
         message->content.fd = content.fd;
@@ -27,23 +28,23 @@ Message MessageCreate(Content content, MessageContentType contentType) {
         if (message->content.str == NULL) {
             // rollback
             free(message);
-            return NULL;
+            message = NULL;
+        } else {
+            strcpy(message->content.str, content.str);
         }
-
-        strcpy(message->content.str, content.str);
     } else { // unknown content type
         // rollback
         free(message);
-        return NULL;
+        message = NULL;
     }
 
     if (!message) {
         log("MessageCreate: failed\n");
 
         return NULL;
+    } else {
+        log("MessageCreate: done\n");
     }
-
-    log("MessageCreate: done\n");
 
     return message;
 }
@@ -80,12 +81,32 @@ Message MessageCopy(Message other) {
     log("MessageCopy: start\n");
 
     if (!other) {
+        log("MessageCopy: failed because of NULL argument\n");
+
         return NULL;
     }
 
-    copy = MessageCreate(other->content, other->contentType);
+    copy = MessageCreate(other->content, other->contentType, other->metaData);
 
     log("MessageCopy: done\n");
 
     return copy;
+}
+
+MessageMetaData buildMessageMetaData() {
+    MessageMetaData metaData;
+
+    log("buildMessageMetaData: start\n");
+
+    metaData = (MessageMetaData) malloc(sizeof(*metaData));
+
+    if (!metaData) {
+        log("buildMessageMetaData: failed with memory allocation\n");
+
+        return NULL;
+    }
+
+    log("buildMessageMetaData: done\n");
+
+    return metaData;
 }

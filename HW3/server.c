@@ -6,6 +6,11 @@
 
 #define SCHED_ALG_MAX_SIZE 7
 
+typedef struct t_worker_thread_params {
+    MessageQueue connectionsQueue;
+    ThreadIndex threadID;
+} *WorkerThreadParams;
+
 // HW3: Parse the new arguments too
 void getargs(int *port, int *threadPoolSize, int *queueSize, char **schedAlg,
              int argc, char *argv[]) {
@@ -23,27 +28,57 @@ void getargs(int *port, int *threadPoolSize, int *queueSize, char **schedAlg,
 }
 
 
-void* threadHandleRequest(void *connectionsQueuePtr) {
-    MessageQueue castedConnectionsQueue = (MessageQueue) connectionsQueuePtr;
+struct timeval getCurrentTime() {
+    struct timeval currentTime;
+    gettimeofday(&currentTime, NULL);
+
+    return currentTime;
+}
+
+void* workerThreadJob(void *params) {
+    WorkerThreadParams currentThreadParams = (WorkerThreadParams) params;
+    MessageQueue connectionsQueue = currentThreadParams->connectionsQueue;
+    ThreadIndex currentThreadID = currentThreadParams->threadID;
     Message currentConnectionMessage;
+    MessageMetaData currentMessageMetaData;
     MQRetCode getRetCode;
     int currentConnFd;
+    int currentThreadCount = 0;
 
-    log("threadHandleRequest: start\n");
+    log("workerThreadJob: start\n");
 
     while (1) {
-        getRetCode = MQGet(castedConnectionsQueue, &currentConnectionMessage);
+        getRetCode = MQGet(connectionsQueue, &currentConnectionMessage);
+
+        currentMessageMetaData = currentConnectionMessage->metaData;
+        currentMessageMetaData->dispatchTime = getCurrentTime(); // todo: calc diff
+        currentMessageMetaData->threadID = currentThreadID;
 
         if (getRetCode == MQ_SUCCESS) {
             currentConnFd = currentConnectionMessage->content.fd;
-            requestHandle(currentConnFd);
+            ++currentThreadCount;
+            currentMessageMetaData->requestsCount = currentThreadCount;
+            currentMessageMetaData->numStaticRequests = 0; // TODO:
+            currentMessageMetaData->numDynamicRequests = 0; // TODO:
+
+            if (IS_DEBUG) {
+                printf("workerThreadJob: %d, Metadata:\n", currentMessageMetaData->threadID);
+                printf("\trequest count: %d\n", currentMessageMetaData->requestsCount);
+                printf("\tarrival time: %ld\n", currentMessageMetaData->arrivalTime.tv_usec);
+                printf("\tdispatch time: %ld\n", currentMessageMetaData->dispatchTime.tv_usec);
+            }
+
+            requestHandle(currentConnFd, currentMessageMetaData); // todo: edit function to include statistics headers in response
+
+            free(currentMessageMetaData);
+
             Close(currentConnFd);
         } else {
-            log("\"threadHandleRequest: error with MQGet \n");
+            log("\"workerThreadJob: error with MQGet \n");
             break;
         }
 
-        log("threadHandleRequest: iteration done\n");
+        log("workerThreadJob: iteration done\n");
     }
 
     return NULL;
@@ -90,9 +125,27 @@ int initServerDataStructures(ThreadPool *threadPool, int threadPoolSize, char *s
 }
 
 void initWorkerThreads(ThreadPool threadPool, MessageQueue connectionsQueue) {
+    WorkerThreadParams params;
+
+    log("initWorkerThreads: start\n");
+
     for (int i = 0; i < TPGetPoolSize(threadPool); i++) {
-        TPAddThread(threadPool, threadHandleRequest, connectionsQueue);
+        params = (WorkerThreadParams) malloc(sizeof(*params));
+
+        if (!params) {
+            // todo: handle fail
+            log("initWorkerThreads: failed\n");
+
+            return;
+        }
+
+        params->connectionsQueue = connectionsQueue;
+
+        params->threadID = i;
+        TPAddThread(threadPool, workerThreadJob, params);
     }
+
+    log("initWorkerThreads: end\n");
 }
 
 int startServer(int port, int threadPoolSize, int queueSize, char *schedAlgo) {
@@ -100,6 +153,7 @@ int startServer(int port, int threadPoolSize, int queueSize, char *schedAlgo) {
     ThreadPool threadPool;
     MessageQueue connectionsQueue;
     Message connectionMessage;
+    MessageMetaData messageMetaData;
     Content connectionMessageContent;
     Content droppedConnectionContent;
     MQRetCode putRetCode;
@@ -117,7 +171,16 @@ int startServer(int port, int threadPoolSize, int queueSize, char *schedAlgo) {
             connfd = Accept(listenfd, (SA *)&clientaddr, (socklen_t *) &clientlen);
 
             connectionMessageContent.fd = connfd;
-            connectionMessage = MessageCreate(connectionMessageContent, MSG_INT);
+
+            messageMetaData = buildMessageMetaData(); // is freed by worker threads
+
+            if (!messageMetaData) {
+                log("server.c: buildMessageMetaData failed\n");
+                break;
+            }
+
+            messageMetaData->arrivalTime = getCurrentTime();
+            connectionMessage = MessageCreate(connectionMessageContent, MSG_INT, messageMetaData);
 
             putRetCode = MQPut(connectionsQueue, connectionMessage, &droppedConnectionContent);
 
