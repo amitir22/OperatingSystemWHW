@@ -28,11 +28,11 @@ void getargs(int *port, int *threadPoolSize, int *queueSize, char **schedAlg,
 }
 
 
-struct timeval getCurrentTime() {
+long getCurrentTimeMS() {
     struct timeval currentTime;
     gettimeofday(&currentTime, NULL);
 
-    return currentTime;
+    return (long)(currentTime.tv_sec) * 1000 + currentTime.tv_usec / 1000;
 }
 
 void* workerThreadJob(void *params) {
@@ -54,26 +54,26 @@ void* workerThreadJob(void *params) {
         getRetCode = MQGet(connectionsQueue, &currentConnectionMessage);
 
         currentMessageMetaData = currentConnectionMessage->metaData;
-        currentMessageMetaData->dispatchTime = getCurrentTime(); // todo: calc diff
+        currentMessageMetaData->dispatchTimeMS = getCurrentTimeMS() - currentMessageMetaData->arrivalTimeMS; // todo: calc diff
         currentMessageMetaData->threadID = currentThreadID;
 
         if (getRetCode == MQ_SUCCESS) {
             currentConnFd = currentConnectionMessage->content.fd;
             ++currentThreadJobCount;
             currentMessageMetaData->requestsCount = currentThreadJobCount;
-            currentMessageMetaData->numStaticRequests = currentThreadStaticCount; // TODO:
-            currentMessageMetaData->numDynamicRequests = currentThreadDynamicCount; // TODO:
+            currentMessageMetaData->numStaticRequests = currentThreadStaticCount;
+            currentMessageMetaData->numDynamicRequests = currentThreadDynamicCount;
 
             if (IS_DEBUG) {
                 printf("workerThreadJob: %d, Metadata:\n", currentMessageMetaData->threadID);
                 printf("\trequest count: %d\n", currentMessageMetaData->requestsCount);
                 printf("\tstatic count: %d\n", currentMessageMetaData->numStaticRequests);
                 printf("\tdynamic count: %d\n", currentMessageMetaData->numDynamicRequests);
-                printf("\tarrival time: %ld\n", currentMessageMetaData->arrivalTime.tv_usec);
-                printf("\tdispatch time: %ld\n", currentMessageMetaData->dispatchTime.tv_usec);
+                printf("\tarrival time: %ld\n", currentMessageMetaData->arrivalTimeMS);
+                printf("\tdispatch time: %ld\n", currentMessageMetaData->dispatchTimeMS);
             }
 
-            currentIsStatic = requestHandle(currentConnFd, currentMessageMetaData); // todo: edit function to include statistics headers in response
+            currentIsStatic = requestHandle(currentConnFd, currentMessageMetaData);
 
             // updating thread counters
             if (currentIsStatic) {
@@ -191,7 +191,7 @@ int startServer(int port, int threadPoolSize, int queueSize, char *schedAlgo) {
                 break;
             }
 
-            messageMetaData->arrivalTime = getCurrentTime();
+            messageMetaData->arrivalTimeMS = getCurrentTimeMS();
             connectionMessage = MessageCreate(connectionMessageContent, MSG_INT, messageMetaData);
 
             putRetCode = MQPut(connectionsQueue, connectionMessage, &droppedConnectionContent);
