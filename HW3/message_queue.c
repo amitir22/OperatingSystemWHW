@@ -232,7 +232,10 @@ MQRetCode MQPut(MessageQueue messageQueue, Message message, Content *dropped) {
     // Escape critical section
 
     log("MQPut: done\n");
-    printf("MQPut: result=%d\n", result);
+
+    if (IS_DEBUG) {
+        printf("MQPut: result=%d\n", result);
+    }
 
     return result;
 }

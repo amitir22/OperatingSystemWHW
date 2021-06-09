@@ -102,7 +102,9 @@ void TPSignalStartAll(ThreadPool threadPool) {
         threadPool->threads[i] = currentTID;
 
         // todo: remove:
-        printf("TPSignalStartAll: thread id: %ld created\n", currentTID);
+        if (IS_DEBUG) {
+            printf("TPSignalStartAll: thread id: %ld created\n", currentTID);
+        }
     }
 
     log("TPSignalStartAll: done\n");

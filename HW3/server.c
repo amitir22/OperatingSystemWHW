@@ -54,7 +54,7 @@ void* workerThreadJob(void *params) {
         getRetCode = MQGet(connectionsQueue, &currentConnectionMessage);
 
         currentMessageMetaData = currentConnectionMessage->metaData;
-        currentMessageMetaData->dispatchTimeMS = getCurrentTimeMS() - currentMessageMetaData->arrivalTimeMS; // todo: calc diff
+        currentMessageMetaData->dispatchTimeMS = getCurrentTimeMS() - currentMessageMetaData->arrivalTimeMS;
         currentMessageMetaData->threadID = currentThreadID;
 
         if (getRetCode == MQ_SUCCESS) {

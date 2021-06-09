@@ -1,6 +1,5 @@
 from subprocess import PIPE, check_output as run
 from threading import Thread, current_thread
-from os import chdir, getcwd
 
 
 def send_requests():
