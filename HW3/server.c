@@ -33,6 +33,7 @@ long getCurrentTimeMS() {
     gettimeofday(&currentTime, NULL);
 
     return (long)(currentTime.tv_sec) * 1000 + currentTime.tv_usec / 1000;
+    //i.e finish time is 5.5 start time is 5.1 in this case we'are gonna get 0 in return Wrong!!
 }
 
 void* workerThreadJob(void *params) {
@@ -54,12 +55,12 @@ void* workerThreadJob(void *params) {
         getRetCode = MQGet(connectionsQueue, &currentConnectionMessage);
 
         currentMessageMetaData = currentConnectionMessage->metaData;
-        currentMessageMetaData->dispatchTimeMS = getCurrentTimeMS() - currentMessageMetaData->arrivalTimeMS;
+        currentMessageMetaData->dispatchTimeMS = getCurrentTimeMS() - currentMessageMetaData->arrivalTimeMS;//may cause inaccurancy
         currentMessageMetaData->threadID = currentThreadID;
 
         if (getRetCode == MQ_SUCCESS) {
             currentConnFd = currentConnectionMessage->content.fd;
-            ++currentThreadJobCount;
+            ++currentThreadJobCount;//transfer
             currentMessageMetaData->requestsCount = currentThreadJobCount;
             currentMessageMetaData->numStaticRequests = currentThreadStaticCount;
             currentMessageMetaData->numDynamicRequests = currentThreadDynamicCount;
@@ -171,7 +172,7 @@ int startServer(int port, int threadPoolSize, int queueSize, char *schedAlgo) {
     MQRetCode putRetCode;
     struct sockaddr_in clientaddr;
 
-    if (initServerDataStructures(&threadPool, threadPoolSize, schedAlgo, &connectionsQueue, queueSize)) {
+    if (initServerDataStructures(&threadPool, threadPoolSize, schedAlgo, &connectionsQueue, queueSize)) {//Good
         initWorkerThreads(threadPool, connectionsQueue);
 
         TPSignalStartAll(threadPool);
@@ -210,7 +211,7 @@ int startServer(int port, int threadPoolSize, int queueSize, char *schedAlgo) {
                 continue;
             } else {
                 log("server.c: MQPUT failed.\n");
-                break;
+                break;   // todo: checking Handling Errors procedure
             }
         }
     }
