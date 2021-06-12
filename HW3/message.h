@@ -35,7 +35,6 @@ typedef struct t_message {
 Message MessageCreate(Content content, MessageContentType type, MessageMetaData metaData);
 void MessageFree(Message message);
 Message MessageCopy(Message other);
-
 MessageMetaData buildMessageMetaData();
 
 #endif //MESSAGE_H

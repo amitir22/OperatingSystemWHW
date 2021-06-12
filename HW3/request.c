@@ -103,12 +103,12 @@ void requestGetFiletype(char *filename, char *filetype)
 
 void requestServeDynamic(int fd, char *filename, char *cgiargs, MessageMetaData metaData)
 {
-   char buf[MAXLINE], *emptylist[] = {NULL};
+    char buf[MAXLINE], *emptylist[] = {NULL};
 
-   // The server does only a little bit of the header.  
-   // The CGI script has to finish writing out the header.
-   sprintf(buf, "HTTP/1.0 200 OK\r\n");
-   sprintf(buf, "%sServer: OS-HW3 Web Server\r\n", buf);
+    // The server does only a little bit of the header.
+    // The CGI script has to finish writing out the header.
+    sprintf(buf, "HTTP/1.0 200 OK\r\n");
+    sprintf(buf, "%sServer: OS-HW3 Web Server\r\n", buf);
     sprintf(buf, "%sStat-req-arrival: %ld\r\n", buf, metaData->arrivalTimeMS);
     sprintf(buf, "%sStat-req-dispatch: %ld\r\n", buf, metaData->dispatchTimeMS);
     sprintf(buf, "%sStat-thread-id: %d\r\n", buf, metaData->threadID);
@@ -116,16 +116,16 @@ void requestServeDynamic(int fd, char *filename, char *cgiargs, MessageMetaData 
     sprintf(buf, "%sStat-thread-static: %d\r\n", buf, metaData->numStaticRequests);
     sprintf(buf, "%sStat-thread-dynamic: %d\r\n", buf, metaData->numDynamicRequests);
 
-   Rio_writen(fd, buf, strlen(buf));
+    Rio_writen(fd, buf, strlen(buf));
 
-   if (Fork() == 0) {
-      /* Child process */
-      Setenv("QUERY_STRING", cgiargs, 1);
-      /* When the CGI process writes to stdout, it will instead go to the socket */
-      Dup2(fd, STDOUT_FILENO);
-      Execve(filename, emptylist, environ);
-   }
-   Wait(NULL);
+    if (Fork() == 0) {
+       /* Child process */
+       Setenv("QUERY_STRING", cgiargs, 1);
+       /* When the CGI process writes to stdout, it will instead go to the socket */
+       Dup2(fd, STDOUT_FILENO);
+       Execve(filename, emptylist, environ);
+    }
+    Wait(NULL);
 }
 
 
