@@ -2,8 +2,12 @@ from subprocess import STDOUT, check_output as run
 from threading import Thread, current_thread
 
 
+THREAD_COUNT = 20
+ITERATION_COUNT = 1
+
+
 def send_requests():
-    for i in range(10):
+    for i in range(ITERATION_COUNT):
         to_print = ''
         to_print += str(current_thread()) + '\n'
         to_print += 'iteration: ' + str(i) + '\n'
@@ -14,23 +18,34 @@ def send_requests():
         print(to_print)
 
 
+def init_threads(amount):
+    threads = []
+
+    for i in range(amount):
+        threads.append(Thread(target=send_requests))
+
+    return threads
+
+
+def start_threads(threads):
+    for t in threads:
+        t.start()
+
+
+def join_threads(threads):
+    for t in threads:
+        t.join()
+
+
 def main():
     print('init threads')
-    t1 = Thread(target=send_requests)
-    t2 = Thread(target=send_requests)
-    t3 = Thread(target=send_requests)
-    t4 = Thread(target=send_requests)
+    threads = init_threads(THREAD_COUNT)
 
     print('starting threads')
-    t1.start()
-    t2.start()
-    t3.start()
-    t4.start()
+    start_threads(threads)
 
-    t1.join()
-    t2.join()
-    t3.join()
-    t4.join()
+    print('waiting threads')
+    join_threads(threads)
 
 
 if __name__ == '__main__':

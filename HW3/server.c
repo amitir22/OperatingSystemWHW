@@ -85,6 +85,7 @@ void* workerThreadJob(void *params) {
             }
 
             free(currentMessageMetaData);
+            MessageFree(currentConnectionMessage);
 
             Close(currentConnFd);
         } else {
@@ -182,6 +183,7 @@ int startServer(int port, int threadPoolSize, int queueSize, char *schedAlgo) {
         listenfd = Open_listenfd(port);
 
         while (1) {
+            droppedAmount = 0;
             clientlen = sizeof(clientaddr);
             connfd = Accept(listenfd, (SA *)&clientaddr, (socklen_t *) &clientlen);
 
