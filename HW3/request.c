@@ -110,12 +110,12 @@ void requestServeDynamic(int fd, char *filename, char *cgiargs, MessageMetaData 
     // The CGI script has to finish writing out the header.
     sprintf(buf, "HTTP/1.0 200 OK\r\n");
     sprintf(buf, "%sServer: OS-HW3 Web Server\r\n", buf);
-    sprintf(buf, "%sStat-req-arrival: %ld\r\n", buf, metaData->arrivalTimeMS);
-    sprintf(buf, "%sStat-req-dispatch: %ld\r\n", buf, metaData->dispatchTimeMS);
-    sprintf(buf, "%sStat-thread-id: %d\r\n", buf, metaData->threadID);
-    sprintf(buf, "%sStat-thread-count: %d\r\n", buf, metaData->requestsCount);
-    sprintf(buf, "%sStat-thread-static: %d\r\n", buf, metaData->numStaticRequests);
-    sprintf(buf, "%sStat-thread-dynamic: %d\r\n", buf, metaData->numDynamicRequests);
+    sprintf(buf, "%sStat-Req-Arrival: %ld\r\n", buf, metaData->arrivalTimeMS);
+    sprintf(buf, "%sStat-Req-Dispatch: %ld\r\n", buf, metaData->dispatchTimeMS);
+    sprintf(buf, "%sStat-Thread-Id: %d\r\n", buf, metaData->threadID);
+    sprintf(buf, "%sStat-Thread-Count: %d\r\n", buf, metaData->requestsCount);
+    sprintf(buf, "%sStat-Thread-Static: %d\r\n", buf, metaData->numStaticRequests);
+    sprintf(buf, "%sStat-Thread-Dynamic: %d\r\n", buf, metaData->numDynamicRequests);
 
     Rio_writen(fd, buf, strlen(buf));
 
