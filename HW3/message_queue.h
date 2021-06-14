@@ -26,7 +26,7 @@ typedef enum e_mq_sched_policy {
 
 MessageQueue MQCreate(int capacity, MessageContentType messageType, char *schedAlgo);
 void MQFree(MessageQueue messageQueue);
-MQRetCode MQPut(MessageQueue messageQueue, Message message, Content *dropped);
+MQRetCode MQPut(MessageQueue messageQueue, Message message, Content **dropped, int *droppedAmount);
 MQRetCode MQGet(MessageQueue messageQueue, Message *message);
 int MQGetSize(MessageQueue messageQueue);
 int MQGetCapacity(MessageQueue messageQueue);

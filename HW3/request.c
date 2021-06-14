@@ -104,6 +104,7 @@ void requestGetFiletype(char *filename, char *filetype)
 void requestServeDynamic(int fd, char *filename, char *cgiargs, MessageMetaData metaData)
 {
     char buf[MAXLINE], *emptylist[] = {NULL};
+    pid_t forkedPID;
 
     // The server does only a little bit of the header.
     // The CGI script has to finish writing out the header.
@@ -118,14 +119,17 @@ void requestServeDynamic(int fd, char *filename, char *cgiargs, MessageMetaData 
 
     Rio_writen(fd, buf, strlen(buf));
 
-    if (Fork() == 0) {
+    forkedPID = Fork();
+
+    if (forkedPID == 0) {
        /* Child process */
        Setenv("QUERY_STRING", cgiargs, 1);
        /* When the CGI process writes to stdout, it will instead go to the socket */
        Dup2(fd, STDOUT_FILENO);
        Execve(filename, emptylist, environ);
     }
-    Wait(NULL);
+
+    WaitPid(forkedPID, NULL, 0);
 }
 
 

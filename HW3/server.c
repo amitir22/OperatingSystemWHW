@@ -27,7 +27,6 @@ void getargs(int *port, int *threadPoolSize, int *queueSize, char **schedAlg,
     strcpy(*schedAlg, argv[4]);
 }
 
-
 long getCurrentTimeMS() {
     struct timeval currentTime;
     gettimeofday(&currentTime, NULL);
@@ -77,7 +76,9 @@ void* workerThreadJob(void *params) {
             currentIsStatic = requestHandle(currentConnFd, currentMessageMetaData);
 
             // updating thread counters
-            if (currentIsStatic) {
+            if (currentIsStatic == HW3_INVALID_VALUE) {
+                log("server.c: workerThreadJob: invalid request arrived\n");
+            } else if (currentIsStatic) {
                 ++currentThreadStaticCount;
             } else {
                 ++currentThreadDynamicCount;
@@ -168,7 +169,8 @@ int startServer(int port, int threadPoolSize, int queueSize, char *schedAlgo) {
     Message connectionMessage;
     MessageMetaData messageMetaData;
     Content connectionMessageContent;
-    Content droppedConnectionContent;
+    Content *droppedConnectionsContents;
+    int droppedAmount;
     MQRetCode putRetCode;
     struct sockaddr_in clientaddr;
 
@@ -195,18 +197,22 @@ int startServer(int port, int threadPoolSize, int queueSize, char *schedAlgo) {
             messageMetaData->arrivalTimeMS = getCurrentTimeMS();
             connectionMessage = MessageCreate(connectionMessageContent, MSG_INT, messageMetaData);
 
-            putRetCode = MQPut(connectionsQueue, connectionMessage, &droppedConnectionContent);
+            putRetCode = MQPut(connectionsQueue, connectionMessage, &droppedConnectionsContents, &droppedAmount);
 
             MessageFree(connectionMessage);
 
             if (putRetCode == MQ_DROP) {
-                droppedConnFD = droppedConnectionContent.fd;
+                for (int i = 0; i < droppedAmount; ++i) {
+                    droppedConnFD = droppedConnectionsContents[i].fd;
 
-                if (IS_DEBUG) {
-                    printf("server.c: closing: %d\n", droppedConnFD);
+                    if (IS_DEBUG) {
+                        printf("server.c: closing: %d\n", droppedConnFD);
+                    }
+
+                    Close(droppedConnFD);
                 }
 
-                Close(droppedConnFD);
+                free(droppedConnectionsContents);
             } else if (putRetCode == MQ_SUCCESS) {
                 continue;
             } else {

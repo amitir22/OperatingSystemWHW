@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 
-#define IS_DEBUG 0
+#define IS_DEBUG 1
 #define log(MESSAGE) if (IS_DEBUG) printf((MESSAGE))
 
 #endif //LOGGER_H

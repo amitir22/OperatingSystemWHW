@@ -1,14 +1,17 @@
-from subprocess import check_output as run
+from subprocess import STDOUT, check_output as run
 from threading import Thread, current_thread
 
 
 def send_requests():
     for i in range(10):
-        print(current_thread())
-        print('iteration: ' + str(i))
+        to_print = ''
+        to_print += str(current_thread()) + '\n'
+        to_print += 'iteration: ' + str(i) + '\n'
         response = run(args=('/home/student/CLionProjects/OperatingSystemWHW/HW3/client',
-                             'localhost', '4096', 'output.cgi'))
-        print(response.decode('utf-8'))
+                             'localhost', '4096', 'output.cgi'), stderr=STDOUT)
+        to_print += response.decode('utf-8')
+
+        print(to_print)
 
 
 def main():

@@ -18,34 +18,10 @@ struct t_message_queue {
     pthread_cond_t cond_put;
 };
 
-// helper function
-MQSchedPolicy stringToPolicy(char *schedAlgo) {
-    const char *blockPolicy = "block";
-    const char *dropTailPolicy = "dt";
-    const char *dropHeadPolicy = "dh";
-    const char *randomPolicy = "random";
-
-    if (0 == strcmp(schedAlgo, blockPolicy)) {
-        return BLOCK;
-    } else if (0 == strcmp(schedAlgo, dropTailPolicy)) {
-        return DROP_TAIL;
-    } else if (0 == strcmp(schedAlgo, dropHeadPolicy)) {
-        return DROP_HEAD;
-    } else if (0 == strcmp(schedAlgo, randomPolicy)) {
-        return DROP_RANDOM;
-    } else {
-        log("message_queue.c: stringToPolicy: unknown policy\n");
-        return INVALID;
-    }
-}
-
-int calcNumToRandomDrop(MessageQueue messageQueue) {
-    if (!messageQueue) {
-        return HW3_INVALID_VALUE;
-    }
-
-    return (int) (0.25 * messageQueue->capacity);
-}
+// helper functions
+int calcNumToRandomDrop(MessageQueue messageQueue);
+int* getRandomIndexes(int capacity, int amount);
+MQSchedPolicy stringToPolicy(char *schedAlgo);
 
 /**
  * MQCreate: constructor for creating an MQ object.
@@ -137,11 +113,14 @@ void MQFree(MessageQueue messageQueue) {
  *      MQ_ERR_MISMATCH_CONTENT_TYPE - if the message content type doesn't match.
  *      MQ_ERR_GENERAL_FAILURE - if operation failed for undocumented reason.
  * */
-MQRetCode MQPut(MessageQueue messageQueue, Message message, Content *dropped) {
+MQRetCode MQPut(MessageQueue messageQueue, Message message, Content **dropped, int *droppedAmount) {
     MQRetCode result = MQ_SUCCESS;
     Message messageCopy;
     Node newNode;
     int isPutting = 1;
+    int *randomIndexes;
+    Node iterator;
+    int droppedIndex;
 
     // used for DROP HEAD
     Node nodeToFree;
@@ -184,6 +163,8 @@ MQRetCode MQPut(MessageQueue messageQueue, Message message, Content *dropped) {
     pthread_mutex_lock(&messageQueue->lock);
 
     while (messageQueue->size == messageQueue->capacity) {
+        log("MQPut: size == capacity");
+
         if (messageQueue->schedPolicy == BLOCK) {
             log("MQPut: BLOCK\n");
 
@@ -191,8 +172,10 @@ MQRetCode MQPut(MessageQueue messageQueue, Message message, Content *dropped) {
         } else if (messageQueue->schedPolicy == DROP_TAIL) {
             log("MQPut: DROP_TAIL\n");
 
+            *dropped = (Content *) malloc(sizeof(Content));
+
             // rollback of allocations (dropping the new message)
-            *dropped = newNode->message->content;
+            **dropped = newNode->message->content;
             MessageFree(newNode->message);
             free(newNode);
 
@@ -205,7 +188,10 @@ MQRetCode MQPut(MessageQueue messageQueue, Message message, Content *dropped) {
             nodeToFree = messageQueue->head;
             messageQueue->head = messageQueue->head->next;
 
-            *dropped = nodeToFree->message->content;
+            *dropped = (Content *) malloc(sizeof(Content));
+
+            // rollback of allocations (dropping the oldest message)
+            **dropped = nodeToFree->message->content;
             MessageFree(nodeToFree->message);
             free(nodeToFree);
 
@@ -219,7 +205,63 @@ MQRetCode MQPut(MessageQueue messageQueue, Message message, Content *dropped) {
         } else if (messageQueue->schedPolicy == DROP_RANDOM) {
             log("MQPut: DROP_RANDOM\n");
 
-            // TODO:
+            *droppedAmount = calcNumToRandomDrop(messageQueue);
+
+            // 4 = 1 / 0.25
+            if (messageQueue->capacity >= 4) {
+                randomIndexes = getRandomIndexes(messageQueue->capacity, *droppedAmount);
+
+                if (!randomIndexes) {
+                    return MQ_ERR_MEMORY_FAIL;
+                }
+
+                *dropped = (Content *) malloc((*droppedAmount) * sizeof(Content));
+
+                if (!dropped) {
+                    // rollback
+                    free(randomIndexes);
+                    return MQ_ERR_MEMORY_FAIL;
+                }
+
+                iterator = messageQueue->head;
+                droppedIndex = 0;
+
+                while (randomIndexes[droppedIndex]) {
+                    (*dropped)[droppedIndex] = messageQueue->head->message->content;
+                    nodeToFree = messageQueue->head;
+                    messageQueue->head = messageQueue->head->next;
+
+                    MessageFree(nodeToFree->message);
+                    free(nodeToFree);
+
+                    --messageQueue->size;
+                    ++droppedIndex;
+                    iterator = iterator->next;
+                }
+
+                for (int i = droppedIndex; i < messageQueue->capacity - 1; ++i) {
+                    if (randomIndexes[i + 1]) {
+                        (*dropped)[droppedIndex] = iterator->next->message->content;
+                        nodeToFree = iterator->next;
+                        iterator->next = iterator->next->next;
+
+                        if (iterator->next == NULL) {
+                            messageQueue->tail = iterator;
+                        }
+
+                        MessageFree(nodeToFree->message);
+                        free(nodeToFree);
+
+                        --messageQueue->size;
+                        ++droppedIndex;
+                    }
+
+                    iterator = iterator->next;
+                }
+
+                result = MQ_DROP;
+                break;
+            }
         }
     }
 
@@ -324,4 +366,63 @@ int MQGetSize(MessageQueue messageQueue) {
  * */
 int MQGetCapacity(MessageQueue messageQueue) {
     return messageQueue->capacity;
+}
+
+// Helper functions implementation:
+
+int calcNumToRandomDrop(MessageQueue messageQueue) {
+    if (!messageQueue) {
+        return HW3_INVALID_VALUE;
+    }
+
+    return (int) (0.25 * messageQueue->capacity);
+}
+
+int* getRandomIndexes(int capacity, int amount) {
+    int *randIndexes;
+    int currentIndex;
+
+    randIndexes = (int *) malloc(capacity * sizeof(int));
+
+    if (!randIndexes) {
+        return NULL;
+    }
+
+    // init randIndexes
+    for (int i = 0; i < capacity; ++i) {
+        randIndexes[i] = 0;
+    }
+
+    // fill randIndexes
+    for (int i = 0; i < amount; ++i) {
+        currentIndex = rand() % capacity;
+
+        if (randIndexes[currentIndex] == 0) {
+            randIndexes[currentIndex] = 1;
+        } else {
+            --i;
+        }
+    }
+
+    return randIndexes;
+}
+
+MQSchedPolicy stringToPolicy(char *schedAlgo) {
+    const char *blockPolicy = "block";
+    const char *dropTailPolicy = "dt";
+    const char *dropHeadPolicy = "dh";
+    const char *randomPolicy = "random";
+
+    if (0 == strcmp(schedAlgo, blockPolicy)) {
+        return BLOCK;
+    } else if (0 == strcmp(schedAlgo, dropTailPolicy)) {
+        return DROP_TAIL;
+    } else if (0 == strcmp(schedAlgo, dropHeadPolicy)) {
+        return DROP_HEAD;
+    } else if (0 == strcmp(schedAlgo, randomPolicy)) {
+        return DROP_RANDOM;
+    } else {
+        log("message_queue.c: stringToPolicy: unknown policy\n");
+        return INVALID;
+    }
 }
