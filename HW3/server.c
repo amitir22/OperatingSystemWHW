@@ -27,11 +27,11 @@ void getargs(int *port, int *threadPoolSize, int *queueSize, char **schedAlg,
     strcpy(*schedAlg, argv[4]);
 }
 
-long getCurrentTimeMS() {
+unsigned long getCurrentTimeMS() {
     struct timeval currentTime;
     gettimeofday(&currentTime, NULL);
 
-    return (long)(currentTime.tv_sec) * 1000 + currentTime.tv_usec / 1000;
+    return (unsigned long)(currentTime.tv_sec) * 1000 + currentTime.tv_usec / 1000;
     //i.e finish time is 5.5 start time is 5.1 in this case we'are gonna get 0 in return Wrong!!
 }
 
