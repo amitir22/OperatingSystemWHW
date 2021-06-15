@@ -244,8 +244,10 @@ MQRetCode MQPut(MessageQueue messageQueue, Message message, Content **dropped, i
                     MessageFree(nodeToFree->message);
                     free(nodeToFree);
                 }
+
                 prev = iterator;
                 iterator = iterator->next;
+
                 for (int i = droppedIndex + 1; i < messageQueue->capacity - 1; ++i) {
                     if (randomIndexes[i]) {
                         (*dropped)[droppedIndex] = iterator->message->content;
