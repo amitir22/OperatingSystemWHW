@@ -5,6 +5,10 @@
 #include "segel.h"
 #include "request.h"
 
+long unsigned int convertTimeValToMSULong(struct timeval timeV) {
+    return (long unsigned int) (timeV.tv_sec * 1000 + timeV.tv_usec / 1000);
+}
+
 // requestError(      fd,    filename,        "404",    "Not found", "OS-HW3 Server could not find this file");
 void requestError(int fd, char *cause, char *errnum, char *shortmsg, char *longmsg) 
 {
@@ -106,12 +110,15 @@ void requestServeDynamic(int fd, char *filename, char *cgiargs, MessageMetaData 
     char buf[MAXLINE], *emptylist[] = {NULL};
     pid_t forkedPID;
 
+    long unsigned int arrivalTimeMS = convertTimeValToMSULong(metaData->arrivalTime);
+    long unsigned int dispatchTimeMS = convertTimeValToMSULong(metaData->dispatchTime);
+
     // The server does only a little bit of the header.
     // The CGI script has to finish writing out the header.
     sprintf(buf, "HTTP/1.0 200 OK\r\n");
     sprintf(buf, "%sServer: OS-HW3 Web Server\r\n", buf);
-    sprintf(buf, "%sStat-Req-Arrival: %ld\r\n", buf, metaData->arrivalTimeMS);
-    sprintf(buf, "%sStat-Req-Dispatch: %ld\r\n", buf, metaData->dispatchTimeMS);
+    sprintf(buf, "%sStat-Req-Arrival: %lu\r\n", buf, arrivalTimeMS);
+    sprintf(buf, "%sStat-Req-Dispatch: %lu\r\n", buf, dispatchTimeMS);
     sprintf(buf, "%sStat-Thread-Id: %d\r\n", buf, metaData->threadID);
     sprintf(buf, "%sStat-Thread-Count: %d\r\n", buf, metaData->requestsCount);
     sprintf(buf, "%sStat-Thread-Static: %d\r\n", buf, metaData->numStaticRequests);
@@ -137,6 +144,9 @@ void requestServeStatic(int fd, char *filename, int filesize, MessageMetaData me
     int srcfd;
     char *srcp, filetype[MAXLINE], buf[MAXBUF];
 
+    long unsigned int arrivalTimeMS = convertTimeValToMSULong(metaData->arrivalTime);
+    long unsigned int dispatchTimeMS = convertTimeValToMSULong(metaData->dispatchTime);
+
     requestGetFiletype(filename, filetype);
 
     srcfd = Open(filename, O_RDONLY, 0);
@@ -151,12 +161,12 @@ void requestServeStatic(int fd, char *filename, int filesize, MessageMetaData me
     sprintf(buf, "%sServer: OS-HW3 Web Server\r\n", buf);
     sprintf(buf, "%sContent-Length: %d\r\n", buf, filesize);
     sprintf(buf, "%sContent-Type: %s\r\n", buf, filetype);
-    sprintf(buf, "%sStat-req-arrival: %ld\r\n", buf, metaData->arrivalTimeMS);
-    sprintf(buf, "%sStat-req-dispatch: %ld\r\n", buf, metaData->dispatchTimeMS);
-    sprintf(buf, "%sStat-thread-id: %d\r\n", buf, metaData->threadID);
-    sprintf(buf, "%sStat-thread-count: %d\r\n", buf, metaData->requestsCount);
-    sprintf(buf, "%sStat-thread-static: %d\r\n", buf, metaData->numStaticRequests);
-    sprintf(buf, "%sStat-thread-dynamic: %d\r\n\r\n", buf, metaData->numDynamicRequests);
+    sprintf(buf, "%sStat-Req-Arrival: %lu\r\n", buf, arrivalTimeMS);
+    sprintf(buf, "%sStat-Req-Dispatch: %lu\r\n", buf, dispatchTimeMS);
+    sprintf(buf, "%sStat-Thread-Id: %d\r\n", buf, metaData->threadID);
+    sprintf(buf, "%sStat-Thread-Count: %d\r\n", buf, metaData->requestsCount);
+    sprintf(buf, "%sStat-Thread-Static: %d\r\n", buf, metaData->numStaticRequests);
+    sprintf(buf, "%sStat-Thread-Dynamic: %d\r\n\r\n", buf, metaData->numDynamicRequests);
 
    Rio_writen(fd, buf, strlen(buf));
 
