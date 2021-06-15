@@ -18,8 +18,8 @@ typedef enum e_message_content_type {
 } MessageContentType;
 
 typedef struct t_message_meta_data {
-    unsigned long arrivalTimeMS;
-    unsigned long dispatchTimeMS;
+    struct timeval arrivalTime;
+    struct timeval dispatchTime;
     int threadID;
     int requestsCount;
     int numStaticRequests;

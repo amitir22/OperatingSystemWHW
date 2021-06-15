@@ -27,15 +27,15 @@ void getargs(int *port, int *threadPoolSize, int *queueSize, char **schedAlg,
     strcpy(*schedAlg, argv[4]);
 }
 
-unsigned long getCurrentTimeMS() {
+struct timeval getCurrentTime() {
     struct timeval currentTime;
     gettimeofday(&currentTime, NULL);
 
-    return (unsigned long)(currentTime.tv_sec) * 1000 + currentTime.tv_usec / 1000;
-    //i.e finish time is 5.5 start time is 5.1 in this case we'are gonna get 0 in return Wrong!!
+    return currentTime;
 }
 
 void* workerThreadJob(void *params) {
+    struct timeval currentTime;
     WorkerThreadParams currentThreadParams = (WorkerThreadParams) params;
     MessageQueue connectionsQueue = currentThreadParams->connectionsQueue;
     ThreadIndex currentThreadID = currentThreadParams->threadID;
@@ -47,19 +47,25 @@ void* workerThreadJob(void *params) {
     int currentThreadDynamicCount = 0;
     int currentThreadStaticCount = 0;
     int currentIsStatic;
+    long unsigned int currentArrivalTimeMS;
+    long unsigned int currentDispatchTimeMS;
 
     log("workerThreadJob: start\n");
 
     while (1) {
         getRetCode = MQGet(connectionsQueue, &currentConnectionMessage);
 
+        currentTime = getCurrentTime();
         currentMessageMetaData = currentConnectionMessage->metaData;
-        currentMessageMetaData->dispatchTimeMS = getCurrentTimeMS() - currentMessageMetaData->arrivalTimeMS;//may cause inaccurancy
         currentMessageMetaData->threadID = currentThreadID;
+        timersub(&currentTime, &(currentMessageMetaData->arrivalTime), &(currentMessageMetaData->dispatchTime));
+
+        currentArrivalTimeMS = convertTimeValToMSULong(currentMessageMetaData->arrivalTime);
+        currentDispatchTimeMS = convertTimeValToMSULong(currentMessageMetaData->dispatchTime);
 
         if (getRetCode == MQ_SUCCESS) {
             currentConnFd = currentConnectionMessage->content.fd;
-            ++currentThreadJobCount;//transfer
+            ++currentThreadJobCount;
             currentMessageMetaData->requestsCount = currentThreadJobCount;
             currentMessageMetaData->numStaticRequests = currentThreadStaticCount;
             currentMessageMetaData->numDynamicRequests = currentThreadDynamicCount;
@@ -69,8 +75,8 @@ void* workerThreadJob(void *params) {
                 printf("\trequest count: %d\n", currentMessageMetaData->requestsCount);
                 printf("\tstatic count: %d\n", currentMessageMetaData->numStaticRequests);
                 printf("\tdynamic count: %d\n", currentMessageMetaData->numDynamicRequests);
-                printf("\tarrival time: %ld\n", currentMessageMetaData->arrivalTimeMS);
-                printf("\tdispatch time: %ld\n", currentMessageMetaData->dispatchTimeMS);
+                printf("\tarrival time: %lu\n", currentArrivalTimeMS);
+                printf("\tdispatch time: %lu\n", currentDispatchTimeMS);
             }
 
             currentIsStatic = requestHandle(currentConnFd, currentMessageMetaData);
@@ -88,8 +94,10 @@ void* workerThreadJob(void *params) {
             MessageFree(currentConnectionMessage);
 
             Close(currentConnFd);
+
+            log("server.c: workerThreadJob: finished requestHandle\n");
         } else {
-            log("\"workerThreadJob: error with MQGet \n");
+            log("workerThreadJob: error with MQGet \n");
             break;
         }
 
@@ -196,7 +204,7 @@ int startServer(int port, int threadPoolSize, int queueSize, char *schedAlgo) {
                 break;
             }
 
-            messageMetaData->arrivalTimeMS = getCurrentTimeMS();
+            messageMetaData->arrivalTime = getCurrentTime();
             connectionMessage = MessageCreate(connectionMessageContent, MSG_INT, messageMetaData);
 
             putRetCode = MQPut(connectionsQueue, connectionMessage, &droppedConnectionsContents, &droppedAmount);
