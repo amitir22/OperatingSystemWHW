@@ -178,12 +178,13 @@ int startServer(int port, int threadPoolSize, int queueSize, char *schedAlgo) {
     Message connectionMessage;
     MessageMetaData messageMetaData;
     Content connectionMessageContent;
-    Content *droppedConnectionsContents;
+    int dropSize;// todo: set drop Size as per schedAlgo:in case of queue size is:0,Rand:((int)(0.25*queueSize))),and 1 otherwise
+    int *droppedConnectionsContents;// todo: set MEM failure procedure +  Handling Errors procedure
     int droppedAmount;
     MQRetCode putRetCode;
     struct sockaddr_in clientaddr;
 
-    if (initServerDataStructures(&threadPool, threadPoolSize, schedAlgo, &connectionsQueue, queueSize)) {//Good
+    if (initServerDataStructures(&threadPool, threadPoolSize, schedAlgo, &connectionsQueue, queueSize)) {
         initWorkerThreads(threadPool, connectionsQueue);
 
         TPSignalStartAll(threadPool);
@@ -197,7 +198,7 @@ int startServer(int port, int threadPoolSize, int queueSize, char *schedAlgo) {
 
             connectionMessageContent.fd = connfd;
 
-            messageMetaData = buildMessageMetaData(); // is freed by worker threads
+            messageMetaData = buildMessageMetaData();
 
             if (!messageMetaData) {
                 log("server.c: buildMessageMetaData failed\n");
@@ -207,13 +208,14 @@ int startServer(int port, int threadPoolSize, int queueSize, char *schedAlgo) {
             messageMetaData->arrivalTime = getCurrentTime();
             connectionMessage = MessageCreate(connectionMessageContent, MSG_INT, messageMetaData);
 
-            putRetCode = MQPut(connectionsQueue, connectionMessage, &droppedConnectionsContents, &droppedAmount);
+            droppedConnectionsContents = (int*)malloc(sizeof(int)*((int)(0.25*queueSize)));
+            putRetCode = MQPut(connectionsQueue, connectionMessage, droppedConnectionsContents, &droppedAmount);
 
             MessageFree(connectionMessage);
 
             if (putRetCode == MQ_DROP) {
                 for (int i = 0; i < droppedAmount; ++i) {
-                    droppedConnFD = droppedConnectionsContents[i].fd;
+                    droppedConnFD = droppedConnectionsContents[i];
 
                     if (IS_DEBUG) {
                         printf("server.c: closing: %d\n", droppedConnFD);
@@ -221,11 +223,13 @@ int startServer(int port, int threadPoolSize, int queueSize, char *schedAlgo) {
 
                     Close(droppedConnFD);
                 }
-
+////Jus
                 free(droppedConnectionsContents);
             } else if (putRetCode == MQ_SUCCESS) {
+                free(droppedConnectionsContents);
                 continue;
             } else {
+                free(droppedConnectionsContents);
                 log("server.c: MQPUT failed.\n");
                 break;   // todo: checking Handling Errors procedure
             }

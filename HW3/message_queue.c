@@ -32,7 +32,7 @@ MQSchedPolicy stringToPolicy(char *schedAlgo);
  * */
 MessageQueue MQCreate(int capacity, MessageContentType messageType, char *schedAlgo) {
     MessageQueue mq = (MessageQueue) malloc(sizeof(*mq));
-
+//Jus
     log("MQCreate: start\n");
 
     if (!mq && capacity != 0) {
@@ -114,7 +114,7 @@ void MQFree(MessageQueue messageQueue) {
  *      MQ_ERR_MISMATCH_CONTENT_TYPE - if the message content type doesn't match.
  *      MQ_ERR_GENERAL_FAILURE - if operation failed for undocumented reason.
  * */
-MQRetCode MQPut(MessageQueue messageQueue, Message message, Content **dropped, int *droppedAmount) {
+MQRetCode MQPut(MessageQueue messageQueue, Message message, int *dropped, int *droppedAmount) {
     MQRetCode result = MQ_SUCCESS;
     Message messageCopy;
     Node newNode;
@@ -123,7 +123,6 @@ MQRetCode MQPut(MessageQueue messageQueue, Message message, Content **dropped, i
     Node iterator,prev;
     int droppedIndex;
 
-    // used for DROP HEAD
     Node nodeToFree;
 
     log("MQPut: start\n");
@@ -163,7 +162,7 @@ MQRetCode MQPut(MessageQueue messageQueue, Message message, Content **dropped, i
     // Enter critical section
     pthread_mutex_lock(&messageQueue->lock);
 
-    while (messageQueue->size == messageQueue->capacity) {//cap>=1?
+    while (messageQueue->size == messageQueue->capacity) {
         log("MQPut: size == capacity\n");
 
         if (messageQueue->schedPolicy == BLOCK) {
@@ -173,10 +172,7 @@ MQRetCode MQPut(MessageQueue messageQueue, Message message, Content **dropped, i
         } else if (messageQueue->schedPolicy == DROP_TAIL) {
             log("MQPut: DROP_TAIL\n");
 
-            *dropped = (Content *) malloc(sizeof(Content));
-
-            // rollback of allocations (dropping the new message)
-            **dropped = newNode->message->content;
+            dropped[0] = newNode->message->content.fd;
             free(newNode->message->metaData);
             MessageFree(newNode->message);
             free(newNode);
@@ -190,19 +186,16 @@ MQRetCode MQPut(MessageQueue messageQueue, Message message, Content **dropped, i
 
             nodeToFree = messageQueue->head;
             messageQueue->head = messageQueue->head->next;
+            dropped[0] = nodeToFree->message->content.fd;
 
-            *dropped = (Content *) malloc(sizeof(Content));
-
-            // rollback of allocations (dropping the oldest message)
-            **dropped = nodeToFree->message->content;
             free(nodeToFree->message->metaData);
             MessageFree(nodeToFree->message);
             free(nodeToFree);
 
-            --messageQueue->size; // update size
+            --messageQueue->size;
 
             if (messageQueue->size == 0) {
-                messageQueue->tail = messageQueue->head; // update tail
+                messageQueue->tail = messageQueue->head;
             }
 
             *droppedAmount = 1;
@@ -212,7 +205,7 @@ MQRetCode MQPut(MessageQueue messageQueue, Message message, Content **dropped, i
 
             *droppedAmount = calcNumToRandomDrop(messageQueue);
 
-            // 4 = 1 / 0.25
+
             if (messageQueue->capacity >= 4) {
                 randomIndexes = getRandomIndexes(messageQueue->capacity, *droppedAmount);
 
@@ -220,19 +213,11 @@ MQRetCode MQPut(MessageQueue messageQueue, Message message, Content **dropped, i
                     return MQ_ERR_MEMORY_FAIL;
                 }
 
-                *dropped = (Content *) malloc((*droppedAmount) * sizeof(Content));
-
-                if (!dropped) {
-                    // rollback
-                    free(randomIndexes);
-                    return MQ_ERR_MEMORY_FAIL;
-                }
-
                 iterator = messageQueue->head;
                 droppedIndex = 0;
 
                 while (randomIndexes[droppedIndex]) {
-                    (*dropped)[droppedIndex] = messageQueue->head->message->content;
+                    dropped[droppedIndex] = messageQueue->head->message->content.fd;
                     nodeToFree = messageQueue->head;
                     messageQueue->head = messageQueue->head->next;
 
@@ -250,11 +235,10 @@ MQRetCode MQPut(MessageQueue messageQueue, Message message, Content **dropped, i
 
                 for (int i = droppedIndex + 1; i < messageQueue->capacity - 1; ++i) {
                     if (randomIndexes[i]) {
-                        (*dropped)[droppedIndex] = iterator->message->content;
+                        dropped[droppedIndex]  = iterator->message->content.fd;
                         nodeToFree = iterator;
                         prev->next = iterator->next;
                         iterator = iterator->next;
-                        //iterator->next = iterator->next->next;
                         free(nodeToFree->message->metaData);
                         MessageFree(nodeToFree->message);
                         free(nodeToFree);

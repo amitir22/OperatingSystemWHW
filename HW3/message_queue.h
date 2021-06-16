@@ -15,7 +15,7 @@ typedef enum e_mq_return_code {
     MQ_ERR_MISMATCH_CONTENT_TYPE,
     MQ_ERR_GENERAL_FAILURE
 } MQRetCode;
-
+////Jus
 typedef enum e_mq_sched_policy {
     INVALID,
     BLOCK,
@@ -26,7 +26,7 @@ typedef enum e_mq_sched_policy {
 
 MessageQueue MQCreate(int capacity, MessageContentType messageType, char *schedAlgo);
 void MQFree(MessageQueue messageQueue);
-MQRetCode MQPut(MessageQueue messageQueue, Message message, Content **dropped, int *droppedAmount);
+MQRetCode MQPut(MessageQueue messageQueue, Message message,int *dropped, int *droppedAmount);
 MQRetCode MQGet(MessageQueue messageQueue, Message *message);
 int MQGetSize(MessageQueue messageQueue);
 int MQGetCapacity(MessageQueue messageQueue);
