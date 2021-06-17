@@ -120,7 +120,7 @@ MQRetCode MQPut(MessageQueue messageQueue, Message message, int *dropped, int *d
     Node newNode;
     int isPutting = 1;
     int *randomIndexes;
-    Node iterator,prev;
+    Node iterator, prev;
     int droppedIndex;
 
     Node nodeToFree;
@@ -245,13 +245,12 @@ MQRetCode MQPut(MessageQueue messageQueue, Message message, int *dropped, int *d
 
                         --messageQueue->size;
                         ++droppedIndex;
-                    }
-
-                    else {
+                    } else {
                         prev = iterator;
                         iterator = iterator->next;
                     }
                 }
+
                 if (prev->next == NULL) {
                     messageQueue->tail = prev;
                 }
