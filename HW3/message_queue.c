@@ -22,11 +22,11 @@ struct t_message_queue {
 int* getRandomIndexes(int capacity, int amount);
 MQSchedPolicy stringToPolicy(char *schedAlgo);
 void putHandleBlock(MessageQueue messageQueue);
-void putHandleDropTail(Content *dropped, int *droppedAmount, Node *newNode, int *isPutting,
+void putHandleDropTail(Content **dropped, int *droppedAmount, Node *newNode, int *isPutting,
                        MQRetCode *result);
-void putHandleDropHead(MessageQueue messageQueue, Content *dropped, int *droppedAmount,
+void putHandleDropHead(MessageQueue messageQueue, Content **dropped, int *droppedAmount,
                        MQRetCode *result);
-void putHandleDropRandom(MessageQueue messageQueue, Content *dropped, int *droppedAmount,
+void putHandleDropRandom(MessageQueue messageQueue, Content **dropped, int *droppedAmount,
                          MQRetCode *result);
 
 // TODO: remove commented code
@@ -114,7 +114,7 @@ void MQFree(MessageQueue messageQueue) {
  *
  * @param messageQueue:         the message queue object we use put on.
  * @param message:              the message object to put in the queue.
- * @param dropped (out):        the array of contents to drop as output for the caller.
+ * @param dropped:              the array of contents to drop as output for the caller.
  *                              (expecting an uninitialized array)
  * @param droppedAmount (out):  the amount of contents dropped as output for the caller.
  *
@@ -127,13 +127,9 @@ void MQFree(MessageQueue messageQueue) {
  *      MQ_ERR_NULL_ARGS    - if messageQueue or message are Null.
  *      MQ_ERR_MEMORY_FAIL  - if a memory allocation failed.
  * */
-MQRetCode MQPut(MessageQueue messageQueue, Message message, Content *dropped, int *droppedAmount) {
+MQRetCode MQPut(MessageQueue messageQueue, Message message, Content **dropped, int *droppedAmount) {
     Message messageCopy;
     Node newNode;
-    Node nodeToFree;
-    Node iterator, prev;
-    int *randomIndexes;
-    int droppedIndex;
     int isPutting = 1;
     MQRetCode result = MQ_SUCCESS;
 
@@ -173,109 +169,20 @@ MQRetCode MQPut(MessageQueue messageQueue, Message message, Content *dropped, in
     while (messageQueue->size == messageQueue->capacity) {
         log("MQPut: size == capacity\n");
 
-        if (messageQueue->schedPolicy == BLOCK ||
-            messageQueue->schedPolicy == DROP_RANDOM && messageQueue->randomDropCount == 0) {
+        if (messageQueue->schedPolicy == BLOCK) {
             putHandleBlock(messageQueue);
-//            log("MQPut: BLOCK\n");
-//
-//            pthread_cond_wait(&messageQueue->cond_get, &messageQueue->lock);
         } else if (messageQueue->schedPolicy == DROP_TAIL) {
             putHandleDropTail(dropped, droppedAmount, &newNode, &isPutting, &result);
-//            log("MQPut: DROP_TAIL\n");
-//
-//            dropped[0] = newNode->message->content;
-//            isPutting = 0;
-//            result = MQ_DROP;
-//            *droppedAmount = 1;
-//
-//            free(newNode->message->metaData);
-//            MessageFree(newNode->message);
-//            free(newNode);
 
             break;
         } else if (messageQueue->schedPolicy == DROP_HEAD) {
-            putHandleDropHead(messageQueue, dropped, droppedAmount, *result);
-//            log("MQPut: DROP_HEAD\n");
-//
-//            nodeToFree = messageQueue->head;
-//            messageQueue->head = messageQueue->head->next;
-//            dropped[0] = nodeToFree->message->content;
-//
-//            free(nodeToFree->message->metaData);
-//            MessageFree(nodeToFree->message);
-//            free(nodeToFree);
-//
-//            --messageQueue->size;
-//
-//            if (messageQueue->size == 0) {
-//                messageQueue->tail = messageQueue->head;
-//            }
-//
-//            *droppedAmount = 1;
-//            result = MQ_DROP;
+            putHandleDropHead(messageQueue, dropped, droppedAmount, &result);
         } else if (messageQueue->schedPolicy == DROP_RANDOM) {
             putHandleDropRandom(messageQueue, dropped, droppedAmount, &result);
 
             if (result == MQ_ERR_MEMORY_FAIL) {
                 return result;
             }
-//            log("MQPut: DROP_RANDOM\n");
-//
-//            *droppedAmount = messageQueue->randomDropCount;
-//
-//            if (messageQueue->capacity >= 4) {
-//                randomIndexes = getRandomIndexes(messageQueue->capacity, *droppedAmount);
-//
-//                if (!randomIndexes) {
-//                    return MQ_ERR_MEMORY_FAIL;
-//                }
-//
-//                iterator = messageQueue->head;
-//                droppedIndex = 0;
-//
-//                while (randomIndexes[droppedIndex]) {
-//                    dropped[droppedIndex] = messageQueue->head->message->content;
-//                    nodeToFree = messageQueue->head;
-//                    messageQueue->head = messageQueue->head->next;
-//
-//                    --messageQueue->size;
-//                    ++droppedIndex;
-//                    iterator = iterator->next;
-//
-//                    free(nodeToFree->message->metaData);
-//                    MessageFree(nodeToFree->message);
-//                    free(nodeToFree);
-//                }
-//
-//                prev = iterator;
-//                iterator = iterator->next;
-//
-//                for (int i = droppedIndex + 1; i < messageQueue->capacity - 1; ++i) {
-//                    if (randomIndexes[i]) {
-//                        dropped[droppedIndex]  = iterator->message->content;
-//                        nodeToFree = iterator;
-//                        prev->next = iterator->next;
-//                        iterator = iterator->next;
-//                        free(nodeToFree->message->metaData);
-//                        MessageFree(nodeToFree->message);
-//                        free(nodeToFree);
-//
-//                        --messageQueue->size;
-//                        ++droppedIndex;
-//                    } else {
-//                        prev = iterator;
-//                        iterator = iterator->next;
-//                    }
-//                }
-//
-//                if (prev->next == NULL) {
-//                    messageQueue->tail = prev;
-//                }
-//
-//
-//                free(randomIndexes);
-//                result = MQ_DROP;
-//            }
 
             break;
         }
@@ -443,11 +350,11 @@ void putHandleBlock(MessageQueue messageQueue) {
     pthread_cond_wait(&messageQueue->cond_get, &messageQueue->lock);
 }
 
-void putHandleDropTail(Content *dropped, int *droppedAmount, Node *newNode, int *isPutting,
+void putHandleDropTail(Content **dropped, int *droppedAmount, Node *newNode, int *isPutting,
                        MQRetCode *result) {
     log("MQPut: putHandleDropTail\n");
 
-    dropped[0] = (*newNode)->message->content;
+    (*dropped)[0] = (*newNode)->message->content;
     *isPutting = 0;
     *result = MQ_DROP;
     *droppedAmount = 1;
@@ -458,7 +365,7 @@ void putHandleDropTail(Content *dropped, int *droppedAmount, Node *newNode, int 
     free((*newNode));
 }
 
-void putHandleDropHead(MessageQueue messageQueue, Content *dropped, int *droppedAmount,
+void putHandleDropHead(MessageQueue messageQueue, Content **dropped, int *droppedAmount,
                        MQRetCode *result) {
     Node nodeToFree;
 
@@ -466,7 +373,7 @@ void putHandleDropHead(MessageQueue messageQueue, Content *dropped, int *dropped
 
     nodeToFree = messageQueue->head;
     messageQueue->head = messageQueue->head->next;
-    dropped[0] = nodeToFree->message->content;
+    (*dropped)[0] = nodeToFree->message->content;
 
     free(nodeToFree->message->metaData);
     MessageFree(nodeToFree->message);
@@ -482,7 +389,7 @@ void putHandleDropHead(MessageQueue messageQueue, Content *dropped, int *dropped
     *result = MQ_DROP;
 }
 
-void putHandleDropRandom(MessageQueue messageQueue, Content *dropped, int *droppedAmount,
+void putHandleDropRandom(MessageQueue messageQueue, Content **dropped, int *droppedAmount,
                          MQRetCode *result) {
     Node iterator;
     Node prev;
@@ -494,7 +401,7 @@ void putHandleDropRandom(MessageQueue messageQueue, Content *dropped, int *dropp
 
     if (messageQueue->capacity < 4) {
         *droppedAmount = 0;
-        putHandleBlock(messageQueue); // todo: if works, revert the change at: mq->policy == BLOCK
+        putHandleBlock(messageQueue);
     } else {
         *droppedAmount = messageQueue->randomDropCount;
 
@@ -502,15 +409,15 @@ void putHandleDropRandom(MessageQueue messageQueue, Content *dropped, int *dropp
 
         if (!randomIndexes) {
             *result = MQ_ERR_MEMORY_FAIL;
-            return; // todo: how to call 'return' from caller?
+            return;
         }
 
         iterator = messageQueue->head;
         droppedIndex = 0;
 
-        // removing all the first random selected messages
+        // removing all the random selected messages from the first indexes
         while (randomIndexes[droppedIndex]) {
-            dropped[droppedIndex] = messageQueue->head->message->content;
+            (*dropped)[droppedIndex] = messageQueue->head->message->content;
             nodeToFree = messageQueue->head;
             messageQueue->head = messageQueue->head->next;
 
@@ -529,7 +436,7 @@ void putHandleDropRandom(MessageQueue messageQueue, Content *dropped, int *dropp
         // removing the rest of the random selected messages
         for (int i = droppedIndex + 1; i < messageQueue->capacity - 1; ++i) {
             if (randomIndexes[i]) {
-                dropped[droppedIndex] = iterator->message->content;
+                (*dropped)[droppedIndex] = iterator->message->content;
                 nodeToFree = iterator;
                 prev->next = iterator->next;
                 iterator = iterator->next;
