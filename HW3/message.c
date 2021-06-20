@@ -73,6 +73,11 @@ Message MessageCopy(Message other) {
     return copy;
 }
 
+/**
+ * buildMessageMetaData: allocating a MessageData struct and returning pointer.
+ *
+ * @returns: an empty MessageMetaData "object" (we're in C so... struct?)
+ * */
 MessageMetaData buildMessageMetaData() {
     MessageMetaData metaData;
 
