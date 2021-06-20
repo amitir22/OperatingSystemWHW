@@ -156,7 +156,7 @@ void initWorkerThreads(ThreadPool threadPool, MessageQueue connectionsQueue) {
         params = (WorkerThreadParams) malloc(sizeof(*params));
 
         if (!params) {
-            // todo: handle fail
+            // todo: handle fail?
             log("initWorkerThreads: failed\n");
 
             return;
@@ -206,8 +206,9 @@ int startServer(int port, int threadPoolSize, int queueSize, char *schedAlgo) {
             }
 
             messageMetaData->arrivalTime = getCurrentTime();
-            connectionMessage = MessageCreate(connectionMessageContent, MSG_INT, messageMetaData);
+            connectionMessage = MessageCreate(connectionMessageContent, messageMetaData);
 
+            // todo: wtf?
             droppedConnectionsContents = (int*)malloc(sizeof(int)*((int)(0.25*queueSize)));
             putRetCode = MQPut(connectionsQueue, connectionMessage, droppedConnectionsContents, &droppedAmount);
 
@@ -230,7 +231,7 @@ int startServer(int port, int threadPoolSize, int queueSize, char *schedAlgo) {
                 continue;
             } else {
                 free(droppedConnectionsContents);
-                log("server.c: MQPUT failed.\n");
+                log("server.c: MQPut failed.\n");
                 break;   // todo: checking Handling Errors procedure
             }
         }

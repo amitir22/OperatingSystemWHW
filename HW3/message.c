@@ -7,44 +7,22 @@
  *
  * @returns: a Message object (or NULL if fails).
  * */
-Message MessageCreate(Content content, MessageContentType contentType, MessageMetaData metaData) {
+Message MessageCreate(Content content, MessageMetaData metaData) {
     Message message = (Message) malloc(sizeof(*message));
 
     log("MessageCreate: start\n");
 
     if (!message) {
         // allocation failed
-        return NULL;
-    }
-
-    message->contentType = contentType;
-    message->metaData = metaData;
-
-    if (contentType == MSG_INT) {
-        message->content.fd = content.fd;
-    } else if (contentType == MSG_STR) {
-        message->content.str = (char *) malloc(strlen(content.str) + 1);
-
-        if (message->content.str == NULL) {
-            // rollback
-            free(message);
-            message = NULL;
-        } else {
-            strcpy(message->content.str, content.str);
-        }
-    } else { // unknown content type
-        // rollback
-        free(message);
-        message = NULL;
-    }
-
-    if (!message) {
         log("MessageCreate: failed\n");
 
         return NULL;
-    } else {
-        log("MessageCreate: done\n");
     }
+
+    message->metaData = metaData;
+    message->content = content;
+
+    log("MessageCreate: done\n");
 
     return message;
 }
@@ -58,10 +36,6 @@ void MessageFree(Message message) {
     log("MessageFree: start\n");
 
     if (message) {
-        if (message->contentType == MSG_STR && message->content.str) {
-            free(message->content.str);
-        }
-
         free(message);
     }
 
@@ -86,7 +60,13 @@ Message MessageCopy(Message other) {
         return NULL;
     }
 
-    copy = MessageCreate(other->content, other->contentType, other->metaData);
+    copy = MessageCreate(other->content, other->metaData);
+
+    if (!copy) {
+        log("MessageCopy: failed\n");
+
+        return NULL;
+    }
 
     log("MessageCopy: done\n");
 
