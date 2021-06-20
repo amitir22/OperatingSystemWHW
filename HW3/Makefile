@@ -2,15 +2,16 @@
 # To compile, type "make" or make "all"
 # To remove files, type "make clean"
 #
+ZIP_NAME = 315836569_203839733.zip
 OBJS = server.o request.o segel.o client.o message.o message_queue.o thread_pool.o
 TARGET = server
 
 CC = gcc
 CFLAGS = -g -Wall
 
-LIBS = -lpthread 
+LIBS = -lpthread
 
-.SUFFIXES: .c .o 
+.SUFFIXES: .c .o
 
 all: server client output.cgi
 	-mkdir -p public
@@ -29,6 +30,10 @@ output.cgi: output.c
 .c.o:
 	$(CC) $(CFLAGS) -o $@ -c $<
 
+zip:
+	zip $(ZIP_NAME) *.c *.h Makefile submitters.txt
+	zip -d $(ZIP_NAME) client.c output.c
+
 clean:
-	-rm -f $(OBJS) server client output.cgi
+	-rm -f $(OBJS) server client output.cgi $(ZIP_NAME)
 	-rm -rf public

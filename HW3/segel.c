@@ -125,11 +125,8 @@ void Close(int fd)
 {
     int rc;
 
-    if ((rc = close(fd)) < 0) {
-        printf("\t bad FD: %d\n", fd); // todo: remove line and "{}" of the if scope
-        printf("\t return code: %d\n", rc); // todo: remove line
+    if ((rc = close(fd)) < 0)
         unix_error("Close error");
-    }
 }
 
 int Select(int  n, fd_set *readfds, fd_set *writefds,

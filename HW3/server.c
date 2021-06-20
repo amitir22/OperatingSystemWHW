@@ -176,7 +176,7 @@ int startServer(int port, int threadPoolSize, int queueSize, char *schedAlgo) {
     Message connectionMessage;
     MessageMetaData messageMetaData;
     Content connectionMessageContent;
-    Content *droppedConnectionsContents;// todo: set MEM failure procedure +  Handling Errors procedure
+    Content *droppedConnectionsContents;
     int dropSize;
     int droppedAmount;
     MQRetCode putRetCode;
