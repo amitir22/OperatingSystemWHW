@@ -14,12 +14,11 @@ typedef struct t_worker_thread_params {
 // HW3: Parse the new arguments too
 void getargs(int *port, int *threadPoolSize, int *queueSize, char **schedAlg,
              int argc, char *argv[]) {
-    if (argc < 2) {
-	    fprintf(stderr, "Usage: %s <port>\n", argv[0]);
+    if (argc < 5) {
+	    fprintf(stderr, "Usage: %s <port> <threadPoolSize> <queueSize> <schedAlg>\n", argv[0]);
 	    exit(1);
     }
 
-    // TODO: maybe validate parameters?
     *port = atoi(argv[1]);
     *threadPoolSize = atoi(argv[2]);
     *queueSize = atoi(argv[3]);
@@ -42,7 +41,7 @@ void* workerThreadJob(void *params) {
     Message currentConnectionMessage;
     MessageMetaData currentMessageMetaData;
     MQRetCode getRetCode;
-    int currentConnFd;
+    Content currentConnFd;
     int currentThreadJobCount = 0;
     int currentThreadDynamicCount = 0;
     int currentThreadStaticCount = 0;
@@ -64,7 +63,7 @@ void* workerThreadJob(void *params) {
         currentDispatchTimeMS = convertTimeValToMSULong(currentMessageMetaData->dispatchTime);
 
         if (getRetCode == MQ_SUCCESS) {
-            currentConnFd = currentConnectionMessage->content.fd;
+            currentConnFd = currentConnectionMessage->content;
             ++currentThreadJobCount;
             currentMessageMetaData->requestsCount = currentThreadJobCount;
             currentMessageMetaData->numStaticRequests = currentThreadStaticCount;
@@ -118,7 +117,7 @@ int initTP(ThreadPool *threadPool, int threadPoolSize) {
 }
 
 int initMQ(MessageQueue *connectionsQueue, int queueSize, char *schedAlgo) {
-    *connectionsQueue = MQCreate(queueSize, MSG_INT, schedAlgo);
+    *connectionsQueue = MQCreate(queueSize, schedAlgo);
 
     if (!(*connectionsQueue)) {
         return 0;
@@ -156,7 +155,6 @@ void initWorkerThreads(ThreadPool threadPool, MessageQueue connectionsQueue) {
         params = (WorkerThreadParams) malloc(sizeof(*params));
 
         if (!params) {
-            // todo: handle fail?
             log("initWorkerThreads: failed\n");
 
             return;
@@ -178,8 +176,8 @@ int startServer(int port, int threadPoolSize, int queueSize, char *schedAlgo) {
     Message connectionMessage;
     MessageMetaData messageMetaData;
     Content connectionMessageContent;
-    int dropSize;// todo: set drop Size as per schedAlgo:in case of queue size is:0,Rand:((int)(0.25*queueSize))),and 1 otherwise
-    int *droppedConnectionsContents;// todo: set MEM failure procedure +  Handling Errors procedure
+    Content *droppedConnectionsContents;// todo: set MEM failure procedure +  Handling Errors procedure
+    int dropSize;// todoS: set drop Size as per schedAlgo:in case of queue size is:0,Rand:((int)(0.25*queueSize))),and 1 otherwise
     int droppedAmount;
     MQRetCode putRetCode;
     struct sockaddr_in clientaddr;
@@ -191,12 +189,24 @@ int startServer(int port, int threadPoolSize, int queueSize, char *schedAlgo) {
 
         listenfd = Open_listenfd(port);
 
+        if (stringToPolicy(schedAlgo) == DROP_RANDOM) {
+            dropSize = queueSize / 4;
+        } else {
+            dropSize = 1;
+        }
+
+        droppedConnectionsContents = (Content*) malloc(dropSize * sizeof(Content));
+
         while (1) {
             droppedAmount = 0;
             clientlen = sizeof(clientaddr);
             connfd = Accept(listenfd, (SA *)&clientaddr, (socklen_t *) &clientlen);
 
-            connectionMessageContent.fd = connfd;
+            if (IS_DEBUG) {
+                printf("server.c: accepting: %d\n", connfd);
+            }
+
+            connectionMessageContent = connfd;
 
             messageMetaData = buildMessageMetaData();
 
@@ -208,9 +218,7 @@ int startServer(int port, int threadPoolSize, int queueSize, char *schedAlgo) {
             messageMetaData->arrivalTime = getCurrentTime();
             connectionMessage = MessageCreate(connectionMessageContent, messageMetaData);
 
-            // todo: wtf?
-            droppedConnectionsContents = (int*)malloc(sizeof(int)*((int)(0.25*queueSize)));
-            putRetCode = MQPut(connectionsQueue, connectionMessage, droppedConnectionsContents, &droppedAmount);
+            putRetCode = MQPut(connectionsQueue, connectionMessage, &droppedConnectionsContents, &droppedAmount);
 
             MessageFree(connectionMessage);
 
@@ -224,15 +232,12 @@ int startServer(int port, int threadPoolSize, int queueSize, char *schedAlgo) {
 
                     Close(droppedConnFD);
                 }
-////Jus
-                free(droppedConnectionsContents);
+
             } else if (putRetCode == MQ_SUCCESS) {
-                free(droppedConnectionsContents);
                 continue;
             } else {
-                free(droppedConnectionsContents);
                 log("server.c: MQPut failed.\n");
-                break;   // todo: checking Handling Errors procedure
+                break;
             }
         }
     }
