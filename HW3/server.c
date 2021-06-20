@@ -177,7 +177,7 @@ int startServer(int port, int threadPoolSize, int queueSize, char *schedAlgo) {
     MessageMetaData messageMetaData;
     Content connectionMessageContent;
     Content *droppedConnectionsContents;// todo: set MEM failure procedure +  Handling Errors procedure
-    int dropSize;// todoS: set drop Size as per schedAlgo:in case of queue size is:0,Rand:((int)(0.25*queueSize))),and 1 otherwise
+    int dropSize;
     int droppedAmount;
     MQRetCode putRetCode;
     struct sockaddr_in clientaddr;

@@ -29,8 +29,6 @@ void putHandleDropHead(MessageQueue messageQueue, Content **dropped, int *droppe
 void putHandleDropRandom(MessageQueue messageQueue, Content **dropped, int *droppedAmount,
                          MQRetCode *result);
 
-// TODO: remove commented code
-
 /**
  * MQCreate: constructor for creating an MQ object.
  *
