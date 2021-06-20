@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CLionExternalBuildManager">
+    <target id="c14f908c-39d5-41f7-bfcd-721fe7aac996" name="Make" defaultType="TOOL">
+      <configuration id="e9449b42-6051-43b0-b376-71c3256773d9" name="Make" toolchainName="Make">
+        <build type="TOOL">
+          <tool actionId="Tool_External Tools_ext_make" />
+        </build>
+        <clean type="TOOL">
+          <tool actionId="Tool_External Tools_ext_make_clean" />
+        </clean>
+      </configuration>
+    </target>
+    <target id="0c0cfde9-811d-4d0c-86ed-adc0c533308e" name="Make hw3 server" defaultType="TOOL">
+      <configuration id="74006f5f-db49-41a9-889d-28ddc89dcf91" name="Make hw3 server" toolchainName="Make">
+        <build type="TOOL">
+          <tool actionId="Tool_External Tools_ext_make_hw3" />
+        </build>
+        <clean type="TOOL">
+          <tool actionId="Tool_External Tools_ext_make_hw3_clean" />
+        </clean>
+      </configuration>
+    </target>
+  </component>
+</project>

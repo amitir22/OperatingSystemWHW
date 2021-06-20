@@ -73,4 +73,14 @@ fabric.properties
 /HW1/unit/*.out
 /HW1/tests/*.out
 .idea/**/.name
+.idea/deployment.xml
 /HW1/315836569_203839733.zip
+
+/HW2/final.zip
+
+/HW3/client
+/HW3/server
+/HW3/output.cgi
+/HW3/public/*
+/HW3/valgrind.output
+/HW3/315836569_203839733.zip
