@@ -9,6 +9,13 @@ struct t_thread_pool {
     pthread_t *threads;
 };
 
+/**
+ * ThreadPoolCreate: creating a thread pool object.
+ *
+ * @param: capacity: the number of threads in the thread pool.
+ *
+ * @returns: the created ThreadPool. (NULL if fails)
+ * */
 ThreadPool ThreadPoolCreate(unsigned int capacity) {
     ThreadPool tp = (ThreadPool) malloc(sizeof(*tp));
 
@@ -55,6 +62,11 @@ ThreadPool ThreadPoolCreate(unsigned int capacity) {
     return tp;
 }
 
+/**
+ * ThreadPoolFree: freeing a thread pool object.
+ *
+ * @param: threadPool: the thread pool to free.
+ * */
 void ThreadPoolFree(ThreadPool threadPool) {
     log("ThreadPoolFree: start\n");
 
@@ -73,6 +85,15 @@ void ThreadPoolFree(ThreadPool threadPool) {
     log("ThreadPoolFree: done\n");
 }
 
+/**
+ * TPAddThread: adding a thread to the thread pool.
+ *
+ * @param: threadPool:  the thread pool object to add to.
+ * @param: function:    the function of the added thread to run when signaled.
+ * @param: args:        the args for the function of the added thread.
+ *
+ * @returns: the index of the newly added thread. (HW3_INVALID_VALUE(-1) if fails)
+ * */
 ThreadIndex TPAddThread(ThreadPool threadPool, ThreadFunction function, void *args) {
     ThreadIndex threadIndex;
 
@@ -92,6 +113,11 @@ ThreadIndex TPAddThread(ThreadPool threadPool, ThreadFunction function, void *ar
     return threadIndex;
 }
 
+/**
+ * TPSignalStartAll: signaling all the threads in the thread pool to start running.
+ *
+ * @param: threadPool: the thread pool of the threads we signal to start.
+ * */
 void TPSignalStartAll(ThreadPool threadPool) {
     pthread_t currentTID;
 
@@ -109,10 +135,13 @@ void TPSignalStartAll(ThreadPool threadPool) {
     log("TPSignalStartAll: done\n");
 }
 
+/**
+ * TPGetPoolSize: getting the pool size of the queried thread pool.
+ *
+ * @param: threadPool: the thread pool object we query.
+ *
+ * @returns: the size of the thread pool. (assuming the given thread pool is valid)
+ * */
 unsigned int TPGetPoolSize(ThreadPool threadPool) {
-    if (!threadPool) {
-        return HW3_INVALID_VALUE;
-    }
-
     return threadPool->capacity;
 }

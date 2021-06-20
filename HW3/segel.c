@@ -121,13 +121,14 @@ off_t Lseek(int fildes, off_t offset, int whence)
     return rc;
 }
 
-void Close(int fd) 
+void Close(int fd)
 {
     int rc;
 
     if ((rc = close(fd)) < 0) {
+        printf("\t bad FD: %d\n", fd); // todo: remove line and "{}" of the if scope
+        printf("\t return code: %d\n", rc); // todo: remove line
         unix_error("Close error");
-        printf("\t bad FD: %d", rc); // todo: remove line and "{}"
     }
 }
 
