@@ -127,6 +127,7 @@ void Close(int fd)
 
     if ((rc = close(fd)) < 0)
         unix_error("Close error");
+        printf("\t bad FD: %d", rc); // todo: remove line
 }
 
 int Select(int  n, fd_set *readfds, fd_set *writefds,
