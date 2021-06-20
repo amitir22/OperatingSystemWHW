@@ -432,7 +432,7 @@ void putHandleDropRandom(MessageQueue messageQueue, Content **dropped, int *drop
         iterator = iterator->next;
 
         // removing the rest of the random selected messages
-        for (int i = droppedIndex + 1; i < messageQueue->capacity - 1; ++i) {
+        for (int i = droppedIndex + 1; i < messageQueue->capacity ; ++i) {
             if (randomIndexes[i]) {
                 (*dropped)[droppedIndex] = iterator->message->content;
                 nodeToFree = iterator;
