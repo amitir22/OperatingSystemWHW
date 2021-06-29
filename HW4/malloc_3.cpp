@@ -137,8 +137,8 @@ void splitIfLargeEnough(size_t size, MallocMetadata *block) {
 }
 
 void *getNewDataBlock(size_t size, MallocMetadata *oldBlock) {
-    size_t lowerAdjacentBlockSize = oldBlock != nullptr && oldBlock->prev != nullptr && oldBlock->prev->isFree
-                                    ? oldBlock->prev->size + _size_meta_data() : 0;
+    size_t lowerAdjacentBlockSize = oldBlock != nullptr && oldBlock->prev != nullptr && oldBlock->prev->isFree ?
+                                    oldBlock->prev->size + _size_meta_data() : 0;
     size_t higherAdjacentBlockSize = oldBlock != nullptr && oldBlock->next != nullptr && oldBlock->next->isFree ?
                                      oldBlock->next->size + _size_meta_data() : 0;
 
