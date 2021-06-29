@@ -13,7 +13,7 @@ malloc_1.o: malloc_1.cpp
 malloc_2.o: malloc_2.cpp
 	$(CC) $(CFLAGS) -c malloc_2.cpp
 
-malloc_3.o: malloc_3.cpp
+malloc_3.o: malloc_3_prev.cpp
 	$(CC) $(CFLAGS) -c malloc_3.cpp
 
 malloc_4.o: malloc_4.cpp
@@ -22,7 +22,7 @@ malloc_4.o: malloc_4.cpp
 tests: tests.cpp
 	$(CC) $(CFLAGS) -o tests tests.cpp
 
-zip: malloc_1.cpp malloc_2.cpp malloc_3.cpp malloc_4.cpp submitters.txt
+zip: malloc_1.cpp malloc_2.cpp malloc_3_prev.cpp malloc_4.cpp submitters.txt
 	zip $(ZIP_NAME) malloc_1.cpp malloc_2.cpp malloc_3.cpp malloc_4.cpp submitters.txt
 
 clean:
