@@ -8,8 +8,8 @@
 #include <string.h>
 #include <sys/mman.h>
 
-
 #define KILO 1024
+
 typedef struct MallocMetadata{
     size_t  size;
     bool is_free;
@@ -352,6 +352,7 @@ void* srealloc(void* oldp, size_t size)	{
 
         while (temp) {
             if (temp->address == oldp) break;
+
             temp = temp->next;
         }
 
@@ -381,7 +382,9 @@ void* srealloc(void* oldp, size_t size)	{
 
 static void releaseNode(MMD node,int size) {
     if (!node->next_free && !node->prev_free) return;
+
     if (node->next_free) node->next_free->prev_free = node->prev_free;
+
     if (node->prev_free) node->prev_free->next_free = node->next_free;
     else bins[size / KILO] = node->next_free;
 
@@ -408,6 +411,7 @@ static void insertNode(MMD* new_node) {
 
                 break;
             }
+
             if (!temp->next_free) {
                 temp->next_free = *new_node;
                 (*new_node)->prev_free = temp;
@@ -442,16 +446,18 @@ static void* splitBlocks(size_t size , MMD node, int sizeBytes) {
     new_node->prev = node;
 
     // case 1: we need to reassign new node into a new linkedList in bins
-    if (!(((int) (new_node->size * 0.001)) == sizeBytes &&
-          (!node->prev_free || new_node->size >= node->prev_free->size))) {
-        releaseNode(node, node->size);
-        insertNode(&new_node);
-    } else { // case 2: let's keep new_node at the same list where the node was before.
+    if ((new_node->size / KILO) == sizeBytes &&
+        (!node->prev_free || new_node->size >= node->prev_free->size)) {
         new_node->next_free = node->next_free;
         new_node->prev_free = node->prev_free;
+
         if (node->next_free) node->next_free->prev_free = new_node;
+
         if (node->prev_free) node->prev_free->next_free = new_node;
         else bins[sizeBytes] = new_node;
+    } else { // case 2: let's keep new_node at the same list where the node was before.
+        releaseNode(node, node->size);
+        insertNode(&new_node);
     }
 
     node->next_free = nullptr;
