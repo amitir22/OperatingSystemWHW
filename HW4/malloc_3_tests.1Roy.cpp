@@ -3,6 +3,7 @@
 #define META_SIZE  sizeof(MallocMetadata) // put your meta data name here.
 #define MAX_MALLOC_SIZE 1e8
 
+// todo: move tests to tests.cpp in the right test num (1 for each of malloc_1/2/3/4)
 int main() {
 
     //   global_list_init = NULL; init of global list.
