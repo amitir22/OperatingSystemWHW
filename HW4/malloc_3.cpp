@@ -8,8 +8,8 @@
 #include <string.h>
 #include <sys/mman.h>
 
-// todo: add `#define KILO 1000` and replace all `pow(10, 3)`/`1000` with that
 
+#define KILO 1024
 typedef struct MallocMetadata{
     size_t  size;
     bool is_free;
@@ -45,20 +45,20 @@ MMD largeAlloc = nullptr;
 void* smalloc(size_t size) {
     if (size == 0 || size > pow(10, 8)) return nullptr;
 
-    MMD temp;// = mallocPtr; todo: should delete comment? or rename var?
-    void *res = nullptr; // todo: should remove unused init value?
-    int sizeBytes = size / 1000;   // converting size to bytes
+    MMD temp;
+    void *res = nullptr;
+    int sizeBytes = size / KILO;   // converting size to bytes
 
-    // todo: should we change it to if-else if?
     // first trial - let's find a free block in bins which satisfies the request
-    if (size < 128 * pow(10, 3)) {
+    if (size < 128 * KILO) {
         for (int i = sizeBytes; i < 128; i++) {
             temp = bins[i];
 
             while (temp) {
                 if (temp->size >= size) {
-                    // todo: why int casting?
-                    if ((int) (temp->size - size - sizeof(MallocMetadata)) >= 128) return splitBlocks(size, temp, i);
+
+                    int totalSize = ((int) ((int) (temp->size - size)) - sizeof(MallocMetadata));
+                    if (totalSize >= 128) return splitBlocks(size, temp, i);
 
                     temp->is_free = false;
                     releaseNode(temp, temp->size);
@@ -85,7 +85,7 @@ void* smalloc(size_t size) {
     }
 
     // case 1 - munmap request
-    if (size >= 128 * pow(10, 3)) {
+    if (size >= 128 * KILO) {
         res = mmap(nullptr, size + sizeof(MallocMetadata),
                    PROT_WRITE | PROT_READ, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
 
@@ -94,7 +94,6 @@ void* smalloc(size_t size) {
         temp = (MallocMetadata *) res;
         temp->address = ((char *) temp) + sizeof(MallocMetadata);
     }
-        ////case 2 -sbrk request todo? remove comment?
 
     else {
         temp = (MallocMetadata *) sbrk(sizeof(MallocMetadata));
@@ -116,7 +115,7 @@ void* smalloc(size_t size) {
     temp->prev_free = nullptr;
 
     // inserting element into a linked list(sbrk alloc Blocks list).
-    if (size < 128 * pow(10, 3)) {
+    if (size < 128 * KILO) {
         MMD temp2;
 
         if (!mallocPtr || (mallocPtr->address > temp->address) ||
@@ -168,7 +167,7 @@ void* smalloc(size_t size) {
 
         return res;
     }
-        // in case we are dealing with munmap request todo? remove comment?
+
     else {
         if (!largeAlloc) {
             largeAlloc = temp;
@@ -207,21 +206,21 @@ void sfree(void* p) {
             return;
         }
 
-		temp = temp->next;
+        temp = temp->next;
     }
 
     temp = largeAlloc;
 
     while (temp) {
         if(temp->address == p) {
-			if(temp->prev) temp->prev->next = temp-> next;
-			else largeAlloc = temp->next;
+            if(temp->prev) temp->prev->next = temp-> next;
+            else largeAlloc = temp->next;
 
-			if(temp->next) temp->next->prev = temp->prev;
+            if(temp->next) temp->next->prev = temp->prev;
 
-			munmap((char*)temp->address -sizeof(MallocMetadata),temp->size+sizeof(MallocMetadata));
+            munmap((char*)temp->address -sizeof(MallocMetadata),temp->size+sizeof(MallocMetadata));
 
-			return;
+            return;
         }
 
         temp = temp->next;
@@ -229,13 +228,13 @@ void sfree(void* p) {
 }
 
 void* srealloc(void* oldp, size_t size)	{
-	int totalsize = 0;
+    int totalsize;
     if(size == 0) return nullptr;
-    if(!oldp)return smalloc(size);	
-    MMD temp = nullptr; // todo: remove unused value?
-    MMD old = nullptr; // todo: delete?
+    if(!oldp)return smalloc(size);
+    MMD temp;
 
-    if(size < 128 * pow(10,3)) {
+
+    if(size < 128 * KILO) {
         temp = mallocPtr;
 
         while (temp) {
@@ -252,12 +251,10 @@ void* srealloc(void* oldp, size_t size)	{
             temp = temp->next;
         }
 
-        //old =temp; todo: delete?
 
         if (temp) {
-            int size2 = 0; // todo: remove unused value?
+            int size2 ;
 
-            // todo: maybe we need to make this "if-chain" into if-else if-else if-...?
             if (temp->prev && temp->prev->is_free && temp->prev->size + temp->size + sizeof(MallocMetadata) >= size) {
                 size2 = temp->prev->size;
                 temp->prev->size += (temp->size + sizeof(MallocMetadata));
@@ -272,7 +269,7 @@ void* srealloc(void* oldp, size_t size)	{
 
                 totalsize = ((int) ((int) (temp->size - size)) - sizeof(MallocMetadata));
 
-                if (totalsize >= 128) return splitBlocks(size, temp, (size2 / 1000);
+                if (totalsize >= 128) return splitBlocks(size, temp, (size2 / KILO));
 
                 releaseNode(temp, size2);
 
@@ -293,7 +290,7 @@ void* srealloc(void* oldp, size_t size)	{
 
                 totalsize = ((int) ((int) (temp->size - size)) - sizeof(MallocMetadata));
 
-                if (totalsize >= 128) return splitBlocks(size, temp, (size2 / 1000);
+                if (totalsize >= 128) return splitBlocks(size, temp, (size2 / KILO));
 
                 releaseNode(temp, size2);
 
@@ -317,7 +314,7 @@ void* srealloc(void* oldp, size_t size)	{
                 temp = temp->prev;
                 totalsize = ((int) ((int) (temp->size - size)) - sizeof(MallocMetadata));
 
-                if (totalsize >= 128) return splitBlocks(size, temp, (size2 / 1000));
+                if (totalsize >= 128) return splitBlocks(size, temp, (size2 / KILO));
 
                 releaseNode(temp->prev, size2);
 
@@ -325,7 +322,7 @@ void* srealloc(void* oldp, size_t size)	{
             }
         }
 
-        if (!temp->next && temp->is_free) {
+        if (temp && !temp->next && temp->is_free) {
             sbrk(size - temp->size);
 
             if (errno == ENOMEM) return nullptr;
@@ -338,7 +335,7 @@ void* srealloc(void* oldp, size_t size)	{
 
         void *temp2 = smalloc(size);
 
-        if (!temp2) return nullptr; // todo: scan implementation to add rollback when NULL if necessary.
+        if (!temp2) return nullptr;
 
         void *res = memcpy(temp2, oldp, size);
 
@@ -386,19 +383,19 @@ static void releaseNode(MMD node,int size) {
     if (!node->next_free && !node->prev_free) return;
     if (node->next_free) node->next_free->prev_free = node->prev_free;
     if (node->prev_free) node->prev_free->next_free = node->next_free;
-    else bins[size / 1000] = node->next_free;
+    else bins[size / KILO] = node->next_free;
 
     node->next_free = nullptr;
     node->prev_free = nullptr;
 }
 
 static void insertNode(MMD* new_node) {
-    MMD temp = bins[(*new_node)->size / 1000];
+    MMD temp = bins[(*new_node)->size / KILO];
 
     if (!temp) {
-        bins[(*new_node)->size / 1000] = (*new_node);
+        bins[(*new_node)->size / KILO] = (*new_node);
     } else if (temp->size >= (*new_node)->size) {
-        bins[(*new_node)->size / 1000] = (*new_node);
+        bins[(*new_node)->size / KILO] = (*new_node);
         temp->prev_free = *new_node;
         (*new_node)->next_free = temp;
     } else {
@@ -427,8 +424,6 @@ static void* splitBlocks(size_t size , MMD node, int sizeBytes) {
     MMD new_node = (MallocMetadata *) ((char *) node->address + size);
 
     new_node->is_free = true;
-
-    int ress = node->size - size - sizeof(MallocMetadata); // todo: remove unused init value? rename to res?
 
     new_node->size = node->size - size - sizeof(MallocMetadata);
     new_node->next_free = nullptr;
@@ -466,8 +461,7 @@ static void* splitBlocks(size_t size , MMD node, int sizeBytes) {
 }
 
 static void mergeBlocks(MMD node) {
-    MMD temp2 = nullptr; // todo: remove variable?
-    int size = node->size; // todo: remove unused init value?
+    int size ;
 
     if (node->next && node->next->is_free) { // merging with right block
         if (lastBlock == node->next) lastBlock = node;
@@ -592,7 +586,7 @@ size_t _num_meta_data_bytes() {
     return counter * sizeof(MallocMetadata);
 }
 
-size_t _size_meta_data() { // todo: if it's here, so why use `sizeof(MallocMetaData)`?
+size_t _size_meta_data() {
     return sizeof (MallocMetadata);
 }
 
