@@ -1,477 +1,492 @@
 #include <unistd.h>
-#include <assert.h>
-#include <cstdlib>
-#include <stdio.h>
-#include <sys/wait.h>
-#include <iostream>
 #include <cmath>
-#include <string.h>
+#include <cassert>
+#include <cstring>
 #include <sys/mman.h>
 
-typedef struct MallocMetadata{
-    size_t  size;
-    bool is_free;
-    void* address;
-    MallocMetadata* next;
-    MallocMetadata* prev;
-}* MMD;
+struct MallocMetadata {
+    size_t size;
+    bool isFree;
+    MallocMetadata *next;
+    MallocMetadata *prev;
+    bool isMMAP;
+};
 
-MMD mallocPtr = nullptr;
-MMD largeAlloc = nullptr;
+void *doAllocate(size_t size);
 
-void* splitBlocks(size_t size , MMD node) {
-    MMD new_node = (MallocMetadata *) ((char *) node->address + size);
+MallocMetadata *getStartOfBlockWithMetadata(size_t size, const void *newMemBlock);
 
-    new_node->is_free = true;
-    new_node->size = node->size - size - sizeof(MallocMetadata);
-    node->size = size;
-    node->is_free = false;
+void *allocateNewHead(size_t size);
 
-    if (node->next) node->next->prev = new_node;
+void *findFreeBlock(size_t size);
 
-    new_node->next = node->next;
-    new_node->prev = node;
-    node->next = new_node;
-    new_node->address = (char *) new_node + sizeof(MallocMetadata);
+MallocMetadata *getTail();
 
-    return node->address;
-}
+void *allocateNewBlock(size_t size);
 
-void* smalloc(size_t size) {
-    if (size == 0 || size > pow(10, 8)) return nullptr;
+MallocMetadata *getBlock(const void *p);
 
-    MMD temp = mallocPtr;
-    void *res = nullptr; // todo: remove unused value
-    size_t rem = size % 8;
+void insertMemBlock(MallocMetadata *startOfMemBlock);
 
-    if (rem)size += (8 - rem);
+size_t _size_meta_data();
 
-    if (size < 128 * pow(10, 3)) {
-        while (temp) {
-            if (temp->is_free && temp->size >= size) {
-                if ((int) (temp->size - size - sizeof(MallocMetadata)) >= 128) {
-                    return splitBlocks(size, temp);
-                }
+void splitBlock(size_t size, MallocMetadata *block);
 
-                temp->is_free = false;
+void removeBlockFromList(MallocMetadata *block);
 
-                return temp->address;
-            }
-            if (!temp->next && temp->is_free) {
-                sbrk(size - temp->size);
+void mergeWithAdjacentBlocks(MallocMetadata *block);
 
-                if (errno == ENOMEM) return nullptr;
+MallocMetadata *getWildernessBlock();
 
-                temp->size += size - temp->size;
-                temp->is_free = false;
+void mergeWithHigherAddress(MallocMetadata *block);
 
-                return temp->address;
-            }
+void mergeWithLowerAddress(MallocMetadata *block);
 
-            temp = temp->next;
-        }
-    }
+void *getNewDataBlock(size_t size, MallocMetadata *oldBlock);
 
-    if (size >= 128 * pow(10, 3)) {
-        res = mmap(nullptr, size + sizeof(MallocMetadata),
-                   PROT_WRITE | PROT_READ, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+void splitIfLargeEnough(size_t size, MallocMetadata *block);
 
-        if (res == MAP_FAILED) return nullptr;
+void *resizeWildernessBlock(size_t size, MallocMetadata *wildernessBlock);
 
-        temp = (MallocMetadata *) res;
-        temp->address = ((char *) temp) + sizeof(MallocMetadata);
+const int SBRK_ERROR_CODE = -1;
+
+MallocMetadata *head = nullptr;
+
+const size_t LARGE_ALLOCATION_SIZE = 128 * 1024;
+const size_t LARGE_ENOUGH_SIZE = 128;
+
+void *smalloc(size_t size) {
+    size = size % 8 != 0 ? ((size >> 3) + 1) << 3 : size;
+
+    if (size == 0 || size > pow(10.0, 8.0)) {
+        return nullptr;
+    } else if (head == nullptr) {
+        return allocateNewHead(size);
     } else {
-        temp = (MallocMetadata *) sbrk(sizeof(MallocMetadata));
+        void *reusedBlock = findFreeBlock(size);
 
-        if (errno == ENOMEM) return nullptr;
+        if (reusedBlock != nullptr) {
+            return reusedBlock;
+        } else {
+            return allocateNewBlock(size);
+        }
+    }
+}
 
-        res = sbrk(size);
+void *scalloc(size_t num, size_t size) {
+    void *block = smalloc(num * size);
 
-        if (errno == ENOMEM) return nullptr;
-
-        temp->address = res;
+    if (block != nullptr) {
+        memset(block, 0, num * size);
     }
 
-    temp->is_free = false;
-    temp->size = size;
-    temp->next = nullptr;
-    temp->prev = nullptr;
+    return block;
+}
 
-    if (size < 128 * pow(10, 3)) {
-        if (!mallocPtr || (mallocPtr->address > temp->address) ||
-            (mallocPtr->address < temp->address && !mallocPtr->next)) {
-            if (!mallocPtr) {
-                mallocPtr = temp;
-                return res;
-            }
+void sfree(void *p) {
+    MallocMetadata *block = getBlock(p);
 
-            if (mallocPtr->address > temp->address) {
-                temp->next = mallocPtr;
-                mallocPtr->prev = temp;
-                mallocPtr = temp;
-                return res;
-            }
+    if (block != nullptr) {
+        if (block->isMMAP) {
+            removeBlockFromList(block);
 
-            temp->prev = mallocPtr;
-            mallocPtr->next = temp;
-            return res;
+            munmap(block, block->size + _size_meta_data());
+        } else {
+            block->isFree = true;
+
+            mergeWithAdjacentBlocks(block);
+        }
+    }
+}
+
+void *srealloc(void *oldp, size_t size) {
+    if (size == 0 || size > pow(10.0, 8.0)) {
+        return nullptr;
+    }
+
+    size = size % 8 != 0 ? ((size >> 3) + 1) << 3 : size;
+
+    MallocMetadata *oldBlock = getBlock(oldp);
+
+    void *newDataBlock = getNewDataBlock(size, oldBlock);
+
+    if (newDataBlock != nullptr && oldBlock != nullptr) {
+        // trying to check if to split
+        MallocMetadata *newMetadataBlock = getBlock(newDataBlock);
+
+        assert(newMetadataBlock->size >= size);
+
+        if (newMetadataBlock != oldBlock) {
+            MallocMetadata *dataBlock = oldBlock;
+            ++dataBlock;
+            memmove(newDataBlock, dataBlock, oldBlock->size);
+
+            sfree(dataBlock);
         }
 
-        MMD temp2 = mallocPtr->next;
+        splitIfLargeEnough(size, newMetadataBlock);
+    }
 
-        while (temp2) {
-            if (temp2->address > temp->address && temp->address > temp2->prev->address) {
-                temp->next = temp2;
-                temp->prev = temp2->prev;
-                temp2->prev->next = temp;
-                temp2->prev = temp;
-                return res;
-            }
-            if (!temp2->next && temp2->address < temp->address) {
-                temp->prev = temp2;
-                temp2->next = temp;
-                return res;
-            }
+    return newDataBlock;
+}
 
-            temp2 = temp2->next;
-        }
+void splitIfLargeEnough(size_t size, MallocMetadata *block) {
+    bool largeEnough = block->size - size - _size_meta_data() >= LARGE_ENOUGH_SIZE &&
+                       block->size - size >=
+                       LARGE_ENOUGH_SIZE; // This is done incase of an underflow and I don't want to cast sizes to integers
 
-        temp2 = mallocPtr;
+    if (largeEnough && !block->isMMAP) {
+        splitBlock(size, block);
+    }
+}
 
-        while (temp2) {
-            temp2 = temp2->next;
-        }
+void *getNewDataBlock(size_t size, MallocMetadata *oldBlock) {
+    size_t lowerAdjacentBlockSize = oldBlock != nullptr && oldBlock->prev != nullptr && oldBlock->prev->isFree
+                                    ? oldBlock->prev->size + _size_meta_data() : 0;
+    size_t higherAdjacentBlockSize = oldBlock != nullptr && oldBlock->next != nullptr && oldBlock->next->isFree ?
+                                     oldBlock->next->size + _size_meta_data() : 0;
 
-        return res;
+    void *newDataBlock;
+
+    if (oldBlock != nullptr && oldBlock->size >= size) {
+        MallocMetadata *oldMetaData = oldBlock;
+        oldMetaData++;
+
+        newDataBlock = oldMetaData;
+    } else if (oldBlock != nullptr && oldBlock->size + lowerAdjacentBlockSize >= size) {
+        MallocMetadata *previous = oldBlock->prev;
+        ++previous;
+
+        newDataBlock = previous;
+
+        mergeWithLowerAddress(oldBlock);
+        oldBlock->prev->isFree = false;
+    } else if (oldBlock != nullptr && oldBlock->size + higherAdjacentBlockSize >= size) {
+        mergeWithHigherAddress(oldBlock);
+        MallocMetadata *oldMetaData = oldBlock;
+        oldMetaData++;
+
+        newDataBlock = oldMetaData;
+    } else if (oldBlock != nullptr && oldBlock->size + higherAdjacentBlockSize + lowerAdjacentBlockSize >= size) {
+        MallocMetadata *previous = oldBlock->prev;
+        ++previous;
+
+        newDataBlock = previous;
+
+        mergeWithAdjacentBlocks(oldBlock);
+        oldBlock->prev->isFree = false;
     } else {
-        MMD temp2 = largeAlloc;
-
-        while (temp2) {
-            temp2 = temp2->next;
+        if (oldBlock == getWildernessBlock()) {
+            oldBlock->isFree = true; // Try to give this block the chance of wilderness enlargement
         }
 
-        if (!largeAlloc) {
-            largeAlloc = temp;
-            return temp->address;
+        newDataBlock = smalloc(size);
+
+        if (newDataBlock == nullptr) { //On the off chance sbrk failed
+            oldBlock->isFree = false;
         }
+    }
 
-        temp->next = largeAlloc;
-        largeAlloc->prev = temp;
-        largeAlloc = temp;
-        temp2 = largeAlloc;
+    return newDataBlock;
+}
 
-        while (temp2) {
-            temp2 = temp2->next;
-        }
 
-        return temp->address;
+void mergeWithAdjacentBlocks(MallocMetadata *block) {
+    mergeWithHigherAddress(block);
+
+    mergeWithLowerAddress(block);
+}
+
+void mergeWithLowerAddress(MallocMetadata *block) {
+    if (block->prev != nullptr && block->prev->isFree && !(block->prev->isMMAP)) {
+        block->prev->size += block->size + _size_meta_data();
+        removeBlockFromList(block);
     }
 }
 
-void* scalloc(size_t num, size_t size) {
-    void *temp = smalloc(num * size);
-
-    if (!temp) return nullptr;
-
-    return memset(temp, 0, num * size);
+void mergeWithHigherAddress(MallocMetadata *block) {
+    if (block->next != nullptr && block->next->isFree && !(block->next->isMMAP)) {
+        block->size += block->next->size + _size_meta_data();
+        removeBlockFromList(block->next);
+    }
 }
 
-void* mergeBlocks(MMD node) {
-    MMD temp = mallocPtr;
-
-    while (temp) {
-        temp = temp->next;
+void removeBlockFromList(MallocMetadata *block) {
+    if (block->prev != nullptr) {
+        block->prev->next = block->next;
+    } else {
+        assert(block == head);
+        head = block->next;
     }
 
-    if (node->next && node->next->is_free) {
-        node->size += (node->next->size + sizeof(MallocMetadata));
-
-        if (node->next->next)node->next->next->prev = node;
-
-        node->next = node->next->next;
+    if (block->next != nullptr) {
+        block->next->prev = block->prev;
     }
-
-    temp = mallocPtr;
-
-    while (temp) {
-        temp = temp->next;
-    }
-
-    if (node->prev && node->prev->is_free) {
-        node->address = node->prev->address;
-        node->prev->size += node->size + sizeof(MallocMetadata);
-
-        if (node->next)node->next->prev = node->prev;
-
-        node->prev->next = node->next;
-    }
-
-    if (!node->prev) mallocPtr = node;
-
-    temp = mallocPtr;
-
-    while (temp) temp = temp->next;
-
-    return node;
 }
 
-void sfree(void* p) {
-    if (!p)return;
+MallocMetadata *getBlock(const void *p) {
+    if (p != nullptr) {
+        MallocMetadata *iterator = head;
 
-    MMD temp = mallocPtr;
+        while (iterator != nullptr) {
+            MallocMetadata *temp = iterator;
+            temp++;
+            if ((temp) == p) {
+                return iterator;
+            } else {
+                iterator = iterator->next;
+            }
+        }
 
-    while (temp) {
-        if (temp->address == p) {
-            temp->is_free = true;
-            mergeBlocks(temp);
+    }
+
+    return nullptr;
+}
+
+void *allocateNewBlock(size_t size) {
+    MallocMetadata *wildernessBlock = getWildernessBlock();
+
+    if (wildernessBlock != nullptr && wildernessBlock->isFree) {
+        return resizeWildernessBlock(size, wildernessBlock);
+
+    } else {
+        void *newBlock = doAllocate(size + sizeof(MallocMetadata));
+
+        MallocMetadata *startOfMemBlock = getStartOfBlockWithMetadata(size, newBlock);
+
+        if (startOfMemBlock == nullptr) {
+            return nullptr;
+        } else {
+            assert(head != nullptr);
+
+            insertMemBlock(startOfMemBlock);
+
+            startOfMemBlock++;
+
+            return startOfMemBlock;
+        }
+    }
+}
+
+void *resizeWildernessBlock(size_t size, MallocMetadata *wildernessBlock) {
+    assert(size > wildernessBlock->size);
+    doAllocate(size - wildernessBlock->size);
+    wildernessBlock->size = size;
+    wildernessBlock->isFree = false;
+
+    ++wildernessBlock;
+
+    return wildernessBlock;
+}
+
+MallocMetadata *getWildernessBlock() {
+    MallocMetadata *iterator = head;
+    MallocMetadata *wildernessBlock = nullptr;
+
+    while (iterator != nullptr) {
+        if (!iterator->isMMAP) {
+            wildernessBlock = iterator;
+        }
+
+        iterator = iterator->next;
+    }
+    return wildernessBlock;
+}
+
+void insertMemBlock(MallocMetadata *startOfMemBlock) {
+    MallocMetadata *iterator = head;
+
+    while (iterator != nullptr) {
+        if (iterator > startOfMemBlock) {
+            if (iterator->prev == nullptr) {
+                //Head
+                assert(head == iterator);
+                head = startOfMemBlock;
+                iterator->prev = startOfMemBlock;
+                head->next = iterator;
+            } else {
+                MallocMetadata *previous = iterator->prev;
+                previous->next = startOfMemBlock;
+                startOfMemBlock->next = iterator;
+                iterator->prev = startOfMemBlock;
+                startOfMemBlock->prev = previous;
+            }
 
             return;
         }
 
-        temp = temp->next;
+        iterator = iterator->next;
     }
 
-    temp = largeAlloc;
+    MallocMetadata *tail = getTail();
+    tail->next = startOfMemBlock;
+    startOfMemBlock->prev = tail;
+}
 
-    while (temp) {
-        if (temp->address == p) {
-            if (temp->prev) temp->prev->next = temp->next;
-            else largeAlloc = temp->next;
+MallocMetadata *getTail() {
+    assert(head != nullptr);
 
-            if (temp->next) temp->next->prev = temp->prev;
+    MallocMetadata *iterator = head;
 
-            munmap((char *) temp->address - sizeof(MallocMetadata), temp->size + sizeof(MallocMetadata));
+    while (iterator->next != nullptr) {
+        iterator = iterator->next;
+    }
 
-            return;
+    return iterator;
+}
+
+void *findFreeBlock(size_t size) {
+    bool isMMAP = size >= LARGE_ALLOCATION_SIZE;
+
+    MallocMetadata *iterator = head;
+
+    while (iterator != nullptr) {
+        if (iterator->isFree && iterator->size >= size && iterator->isMMAP == isMMAP) {
+            iterator->isFree = false;
+
+            if (!isMMAP) {
+                splitIfLargeEnough(size, iterator);
+            }
+
+            iterator++;
+
+            return iterator;
+        } else {
+            iterator = iterator->next;
         }
+    }
 
-        temp = temp->next;
+    return nullptr;
+}
+
+void splitBlock(size_t size, MallocMetadata *block) {
+    char *newChunk = (char *) block;
+
+    newChunk += _size_meta_data() + size;
+
+    auto *splitedBlock = (MallocMetadata *) newChunk;
+
+    splitedBlock->size = block->size - size - _size_meta_data();
+    splitedBlock->isMMAP = false;
+    splitedBlock->prev = nullptr;
+    splitedBlock->next = nullptr;
+    splitedBlock->isFree = true;
+
+    insertMemBlock(splitedBlock);
+
+    block->size = size;
+}
+
+void *allocateNewHead(size_t size) {
+    void *newMemBlock = doAllocate(size + sizeof(MallocMetadata));
+
+    MallocMetadata *startOfBlock = getStartOfBlockWithMetadata(size, newMemBlock);
+
+    if (startOfBlock == nullptr) {
+        return nullptr;
+    } else {
+        head = startOfBlock;
+
+        startOfBlock++;
+
+        return startOfBlock;
     }
 }
 
-void* srealloc(void* oldp, size_t size) {
-    if (size == 0) return nullptr;
-    if (!oldp)return smalloc(size);
+MallocMetadata *getStartOfBlockWithMetadata(size_t size, const void *newMemBlock) {
+    MallocMetadata *newMetadataBlock;
+    if (newMemBlock != nullptr) {
+        newMetadataBlock = (MallocMetadata *) newMemBlock;
 
-    MMD temp = nullptr; // todo: remove unused value?
-    MMD old = nullptr; // todo: remove?
-    size_t rem = size % 8;
+        newMetadataBlock->size = size;
+        newMetadataBlock->isFree = false;
+        newMetadataBlock->next = nullptr;
+        newMetadataBlock->prev = nullptr;
+        newMetadataBlock->isMMAP = size >= LARGE_ALLOCATION_SIZE;
 
-    if (rem)size += (8 - rem);
-
-    if (size < 128 * pow(10, 3)) {
-        temp = mallocPtr;
-
-        while (temp) {
-            if (temp->address == oldp) {
-                if (temp->size >= size) {
-                    temp->is_free = false;
-
-                    return oldp;
-                }
-
-                break;
-            }
-
-            temp = temp->next;
-        }
-
-        old = temp;
-
-        if (temp) {
-            if (temp->prev && temp->prev->is_free && temp->prev->size + temp->size + sizeof(MallocMetadata) >= size) {
-                temp->prev->size += (temp->size + sizeof(MallocMetadata));
-                temp->prev->is_free = false;
-                temp->prev->next = temp->next;
-
-                if (temp->next) temp->next->prev = temp->prev;
-
-                temp = temp->prev;
-
-                if ((int) ((temp->size - size) - sizeof(MallocMetadata)) >= 128) return splitBlocks(size, temp);
-
-                return temp->address;
-            }
-
-            if (temp->next && temp->next->is_free && temp->next->size + temp->size + sizeof(MallocMetadata) >= size) {
-                temp->size += (temp->next->size + sizeof(MallocMetadata));
-                temp->is_free = false;
-                temp->next = temp->next->next;
-
-                if (temp->next)temp->next->prev = temp;
-                if ((int) temp->size - size - sizeof(MallocMetadata) >= 128) return splitBlocks(size, temp);
-
-                return temp->address;
-            }
-
-            if (temp->next && temp->prev && temp->next->is_free && temp->prev->is_free &&
-                temp->next->size + temp->prev->size + temp->size + (2 * sizeof(MallocMetadata)) >= size) {
-
-                temp->prev->size += (temp->size + temp->next->size + (2 * sizeof(MallocMetadata)));
-                temp->prev->is_free = false;
-                temp->prev->next = temp->next->next;
-
-                if (temp->next->next) temp->next->next->prev = temp->prev;
-
-                temp = temp->prev;
-
-                if ((int) temp->size - size - sizeof(MallocMetadata) >= 128) return splitBlocks(size, temp);
-
-                return temp->address;
-            }
-        }
-
-        void *temp2 = smalloc(size);
-
-        if (!temp2) return nullptr;
-
-        void *res = memcpy(temp2, oldp, size);
-
-        if (!res) {
-            sfree(temp2);
-            return nullptr;
-        }
-
-        sfree(oldp);
-
-        return res;
+        return newMetadataBlock;
     } else {
-        temp = largeAlloc;
-
-        while (temp) {
-            if (temp->address == oldp) break;
-
-            temp = temp->next;
-        }
-
-        if (temp->prev) temp->prev->next = temp->next;
-        else largeAlloc = temp->next;
-
-        if (temp->next) temp->next->prev = temp->prev;
-
-        void *temp2 = smalloc(size);
-
-        if (!temp2) return nullptr;
-
-        void *res = memcpy(temp2, oldp, size);
-        munmap((char *) temp->address - sizeof(MallocMetadata), temp->size + sizeof(MallocMetadata));
-
-        if (!res) {
-            sfree(temp2);
-            return nullptr;
-        }
-
-        sfree(oldp);
-
-        return res;
+        return nullptr;
     }
+}
+
+void *doAllocate(size_t size) {
+    void *memory;
+
+    if (size == 0 || size > pow(10.0, 8.0)) {
+        return nullptr;
+    } else if (size < LARGE_ALLOCATION_SIZE) {
+        memory = sbrk(size);
+    } else {
+        assert(size >= LARGE_ALLOCATION_SIZE);
+
+        memory = mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, 0, 0);
+    }
+
+    return memory != (void *) SBRK_ERROR_CODE ? memory : nullptr;
 }
 
 size_t _num_free_blocks() {
-    size_t counter = 0;
-    MMD temp = mallocPtr;
+    MallocMetadata *iterator = head;
 
-    if (temp == nullptr) return 0;
+    int numFree = 0;
+    while (iterator != nullptr) {
+        if (iterator->isFree) {
+            ++numFree;
+        }
 
-    while (temp) {
-        if (temp->is_free) counter++;
-
-        temp = temp->next;
+        iterator = iterator->next;
     }
 
-    return counter;
+    return numFree;
 }
 
 size_t _num_free_bytes() {
-    size_t counter = 0;
-    MMD temp = mallocPtr;
+    MallocMetadata *iterator = head;
 
-    while (temp) {
-        if (temp->is_free) counter += temp->size;
-
-        temp = temp->next;
-    }
-
-    temp = largeAlloc;
-
-    while (temp) {
-        if (temp->is_free) counter += temp->size;
-
-        temp = temp->next;
-    }
-
-    return counter;
-}
-
-size_t _num_allocated_bytes() {
-    size_t counter = 0;
-    MMD temp = mallocPtr;
-
-    while (temp) {
-        counter += temp->size;
-
-        temp = temp->next;
-    }
-
-    temp = largeAlloc;
-
-    while (temp) {
-        if (!temp->is_free) {
-            counter += temp->size;
+    size_t numFreeBytes = 0;
+    while (iterator != nullptr) {
+        if (iterator->isFree) {
+            numFreeBytes += iterator->size;
         }
 
-        temp = temp->next;
+        iterator = iterator->next;
     }
 
-    return counter;
+    return numFreeBytes;
 }
 
 size_t _num_allocated_blocks() {
-    size_t counter = 0;
-    MMD temp = mallocPtr;
+    MallocMetadata *iterator = head;
 
-    while (temp) {
-        counter++;
-        temp = temp->next;
+    int numBlocks = 0;
+    while (iterator != nullptr) {
+        ++numBlocks;
+
+        iterator = iterator->next;
     }
 
-    temp = largeAlloc;
-
-    while (temp) {
-        if (!temp->is_free) {
-            counter++;
-        }
-
-        temp = temp->next;
-    }
-
-    return counter;
+    return numBlocks;
 }
 
-size_t _num_meta_data_bytes() {
-    int counter = _num_allocated_blocks();
+size_t _num_allocated_bytes() {
+    MallocMetadata *iterator = head;
 
-    return counter * sizeof(MallocMetadata);
+    size_t numBytes = 0;
+    while (iterator != nullptr) {
+        numBytes += iterator->size;
+
+        iterator = iterator->next;
+    }
+
+    return numBytes;
 }
 
 size_t _size_meta_data() {
     return sizeof(MallocMetadata);
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+size_t _num_meta_data_bytes() {
+    return _num_allocated_blocks() * _size_meta_data();
+}
 
